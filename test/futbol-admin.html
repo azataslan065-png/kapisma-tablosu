@@ -7,30 +7,36 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
-  :root{--bg:#0d1117;--card:#161b22;--border:#2a3138;--blue:#2f7ef5;--red:#f5473a;--text:#e6edf3;--muted:#8b949e;--green:#3fb950;}
+  :root{--bg:#0d1117;--card:#161b22;--border:#2a3138;--blue:#2f7ef5;--red:#f5473a;--text:#e6edf3;--muted:#8b949e;--green:#3fb950;--amber:#e3b341;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:linear-gradient(180deg,#0d1117,#111a24);color:var(--text);min-height:100vh;padding:24px 12px;}
-  .wrap{max-width:820px;margin:0 auto;}
+  .wrap{max-width:900px;margin:0 auto;}
   h1{text-align:center;font-size:1.5rem;margin-bottom:4px;}
-  .sub{text-align:center;color:var(--muted);font-size:.82rem;margin-bottom:8px;}
-  .warn{text-align:center;color:#e3b341;font-size:.75rem;margin-bottom:20px;background:#2b2210;border:1px solid #4a3a12;border-radius:8px;padding:8px 12px;}
+  .sub{text-align:center;color:var(--muted);font-size:.82rem;margin-bottom:14px;}
   .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;}
-  .card h2{font-size:.9rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;}
+  .card h2{font-size:.9rem;color:var(--muted);margin-bottom:6px;}
+  .card .hint{font-size:.72rem;color:var(--muted);margin-bottom:14px;line-height:1.5;}
   .players-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .player-col.p1{border-left:3px solid var(--blue);padding-left:10px;}
   .player-col.p2{border-left:3px solid var(--red);padding-left:10px;}
   label{font-size:.72rem;color:var(--muted);display:block;margin-bottom:4px;margin-top:8px;}
-  input[type="text"],input[type="number"]{width:100%;background:#0d1117;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 10px;font-size:.9rem;outline:none;}
-  input:focus{border-color:var(--blue);}
+  input[type="text"],input[type="number"],input[type="url"],select{width:100%;background:#0d1117;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 10px;font-size:.9rem;outline:none;font-family:inherit;}
+  input:focus,select:focus,button:focus-visible{border-color:var(--blue);outline:2px solid var(--blue);outline-offset:1px;}
+  .photo-preview{width:100%;height:150px;background:#0d1117;border:1px solid var(--border);border-radius:8px;margin-top:8px;object-fit:cover;display:none;}
+  .file-row{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap;}
+  .file-btn{background:#0d1117;border:1px dashed var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:.78rem;cursor:pointer;flex:1;text-align:center;}
+  .file-btn:hover{border-color:var(--blue);}
+  .file-meta{font-size:.68rem;color:var(--muted);width:100%;}
   table{width:100%;border-collapse:collapse;margin-top:6px;}
-  th{text-align:left;font-size:.7rem;color:var(--muted);text-transform:uppercase;padding:6px 4px;}
-  td{padding:6px 4px;}
+  th{text-align:left;font-size:.7rem;color:var(--muted);padding:6px 4px;font-weight:600;}
+  td{padding:6px 4px;vertical-align:middle;}
   td input[type="text"]{font-weight:600;}
+  td.mid{text-align:center;}
   .del-btn{background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;padding:4px 8px;}
   .del-btn:hover{opacity:.7;}
   .add-stat-row{display:flex;gap:8px;margin-top:12px;}
   .add-stat-row input{flex:1;}
-  button.action{background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:8px;font-size:.85rem;cursor:pointer;transition:.15s;}
+  button.action{background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:8px;font-size:.85rem;cursor:pointer;transition:.15s;font-family:inherit;}
   button.action:hover{background:#1f2733;border-color:var(--blue);}
   button.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
   button.primary:hover{background:#2568d1;}
@@ -40,65 +46,137 @@
   .btn-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:18px 0;}
   .status{text-align:center;font-size:.82rem;color:var(--green);min-height:20px;margin-bottom:6px;}
   .status.error{color:var(--red);}
-  footer{text-align:center;color:var(--muted);font-size:.7rem;margin-top:24px;}
+  .status.busy{color:var(--muted);}
+  .preview-box{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:.82rem;color:var(--muted);line-height:1.6;}
+  .preview-box b{color:var(--text);}
+  .video-item{display:grid;grid-template-columns:1fr 1.4fr auto;gap:6px;align-items:center;margin-bottom:6px;}
+  .list-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;}
+  .list-row .meta{font-size:.7rem;color:var(--muted);margin-top:3px;}
+  .list-row .who{font-size:.82rem;font-weight:600;}
+  .list-row .body{font-size:.85rem;margin-top:2px;white-space:pre-wrap;word-break:break-word;}
+  .scroll-list{max-height:340px;overflow-y:auto;}
+  .empty{color:var(--muted);font-size:.8rem;text-align:center;padding:12px;}
+  footer{text-align:center;color:var(--muted);font-size:.7rem;margin-top:24px;line-height:1.6;}
   .cfg-warn{background:#3a1a18;border:1px solid var(--red);color:#ffb4ae;border-radius:10px;padding:14px;margin-bottom:20px;font-size:.82rem;line-height:1.5;}
+  @media(max-width:600px){
+    .players-grid{grid-template-columns:1fr;}
+    .video-item{grid-template-columns:1fr auto;}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🛠️ Admin Paneli</h1>
-  <p class="sub">Veriyi buradan gir ve kaydet — kapışma tablosu bu veriyi gerçek zamanlı gösterir</p>
-  <p class="warn">⚠️ Test modu kuralları kullanılırsa bu veri herkese açık olur.</p>
+  <h1>Admin Paneli</h1>
+  <p class="sub">Girdiğin veri kapışma tablosunda anında görünür</p>
 
   <div id="cfgWarning" class="cfg-warn" style="display:none;">
-    <b>Firebase config eksik.</b> Bu dosyanın en altındaki <code>&lt;script&gt;</code> içinde
-    <code>firebaseConfig</code> nesnesini kendi Firebase projenin bilgileriyle doldurman gerekiyor.
-    Aynı config'i <b>futbol-kapisma-tablosu.html</b> dosyasına da yapıştır.
+    <b>Firebase bağlantısı kurulamadı.</b> Sayfadaki firebaseConfig değerlerini kontrol et.
   </div>
 
   <div class="status" id="status">Yükleniyor…</div>
 
   <div class="card">
     <h2>Oyuncular</h2>
+    <p class="hint">Fotoğrafı cihazından yükleyebilir ya da bir adres yapıştırabilirsin. Yüklenen görsel 520 piksele küçültülüp sıkıştırılır.</p>
     <div class="players-grid">
       <div class="player-col p1">
-        <label>Oyuncu 1 Adı</label>
-        <input type="text" id="name1" value="Oyuncu 1">
-        <label>Takım / Pozisyon</label>
-        <input type="text" id="team1" value="">
+        <label for="name1">Oyuncu 1 adı</label>
+        <input type="text" id="name1" maxlength="60" value="Oyuncu 1">
+        <label for="team1">Takım / pozisyon</label>
+        <input type="text" id="team1" maxlength="60">
+        <label for="photoUrl1">Fotoğraf adresi</label>
+        <input type="url" id="photoUrl1" placeholder="https://…">
+        <div class="file-row">
+          <label class="file-btn" for="photoFile1">Cihazdan fotoğraf yükle</label>
+          <input type="file" id="photoFile1" accept="image/*" hidden>
+          <button class="action" type="button" id="photoClear1">Kaldır</button>
+          <span class="file-meta" id="photoMeta1"></span>
+        </div>
+        <img id="photoPreview1" class="photo-preview" alt="Oyuncu 1 fotoğrafı">
       </div>
       <div class="player-col p2">
-        <label>Oyuncu 2 Adı</label>
-        <input type="text" id="name2" value="Oyuncu 2">
-        <label>Takım / Pozisyon</label>
-        <input type="text" id="team2" value="">
+        <label for="name2">Oyuncu 2 adı</label>
+        <input type="text" id="name2" maxlength="60" value="Oyuncu 2">
+        <label for="team2">Takım / pozisyon</label>
+        <input type="text" id="team2" maxlength="60">
+        <label for="photoUrl2">Fotoğraf adresi</label>
+        <input type="url" id="photoUrl2" placeholder="https://…">
+        <div class="file-row">
+          <label class="file-btn" for="photoFile2">Cihazdan fotoğraf yükle</label>
+          <input type="file" id="photoFile2" accept="image/*" hidden>
+          <button class="action" type="button" id="photoClear2">Kaldır</button>
+          <span class="file-meta" id="photoMeta2"></span>
+        </div>
+        <img id="photoPreview2" class="photo-preview" alt="Oyuncu 2 fotoğrafı">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Sezon</h2>
+    <p class="hint">Maç kaydettiğinde bu etiket kullanılır, sezon karşılaştırması buna göre gruplanır.</p>
+    <input type="text" id="season" maxlength="40" placeholder="örn. 2025-2026" value="2025-2026">
+  </div>
+
+  <div class="card">
+    <h2>Video ve bağlantılar</h2>
+    <p class="hint">Her oyuncu için istediğin kadar bağlantı ekleyebilirsin. Sadece http ve https adresleri kaydedilir.</p>
+    <div class="players-grid">
+      <div class="player-col p1">
+        <label>Oyuncu 1 bağlantıları</label>
+        <div id="videoList1"></div>
+        <button class="action" type="button" id="addVideo1" style="margin-top:8px;">Bağlantı ekle</button>
+      </div>
+      <div class="player-col p2">
+        <label>Oyuncu 2 bağlantıları</label>
+        <div id="videoList2"></div>
+        <button class="action" type="button" id="addVideo2" style="margin-top:8px;">Bağlantı ekle</button>
       </div>
     </div>
   </div>
 
   <div class="card">
     <h2>İstatistikler</h2>
-    <table id="statsTable">
-      <thead><tr><th style="width:32%">İstatistik Adı</th><th>Oyuncu 1</th><th>Oyuncu 2</th><th></th></tr></thead>
+    <p class="hint">Skor sütunundaki kutu işaretliyse o satır maçın kazananını belirlerken sayılır. Oynanan maç, dakika gibi üstünlük göstermeyen satırlarda işareti kaldır.</p>
+    <table>
+      <thead><tr><th style="width:34%">İstatistik</th><th>Oyuncu 1</th><th>Oyuncu 2</th><th style="width:52px;text-align:center">Skor</th><th style="width:40px"></th></tr></thead>
       <tbody id="statsBody"></tbody>
     </table>
     <div class="add-stat-row">
-      <input type="text" id="newStatLabel" placeholder="Yeni istatistik adı (örn. Gol)">
-      <button class="action" onclick="addStat()">+ Ekle</button>
+      <input type="text" id="newStatLabel" maxlength="40" placeholder="Yeni istatistik adı, örn. Gol">
+      <button class="action" type="button" id="addStatBtn">Ekle</button>
     </div>
+    <div class="preview-box" id="liveScore" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Karşılaşma geçmişi</h2>
+    <p class="hint">Her kaydedilen maç ayrı bir kayıt olur. H2H rekoru ve sezon tablosu bu listeden hesaplanır.</p>
+    <div class="preview-box" id="h2hPreview">Yükleniyor…</div>
+    <div class="scroll-list" id="matchList" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Tartışma bölümü</h2>
+    <p class="hint">Yorumları ziyaretçiler kapışma tablosundan yazar. Buradan silebilirsin.</p>
+    <div class="scroll-list" id="commentList"><div class="empty">Yükleniyor…</div></div>
   </div>
 
   <div class="btn-row">
-    <button class="action primary" id="saveBtn" onclick="saveData()">☁️ Kaydet (Firebase'e Gönder)</button>
-    <button class="action danger" onclick="clearAll()">🗑️ Tümünü Temizle</button>
+    <button class="action primary" type="button" id="saveMatchBtn">Kaydet ve maç olarak işle</button>
+    <button class="action" type="button" id="saveOnlyBtn">Sadece tabloyu güncelle</button>
+    <button class="action danger" type="button" id="clearBtn">Her şeyi sil</button>
   </div>
 
-  <footer>Kaydet'e bastığında Firestore'a yazılır. Kapışma tablosu bu veriyi gerçek zamanlı dinler, sayfa yenilemeye gerek yok.</footer>
+  <footer>
+    <span id="buildLine"></span><br>
+    Maç olarak işlersen H2H rekoruna yeni bir satır eklenir. Sadece tabloyu güncellersen geçmiş değişmez.
+  </footer>
 </div>
 
 <script>
-// ====== BURAYI KENDİ FIREBASE PROJENLE DOLDUR ======
-// Firebase Console → Proje Ayarları → Web Uygulaması → firebaseConfig
+window.APP_BUILD = '2026.09.03.2';
+
 const firebaseConfig = {
   apiKey: "AIzaSyByRs32guz2QBcoDFcA_q0BvWo_VuX9bmg",
   authDomain: "kapisma-tablosu.firebaseapp.com",
@@ -107,132 +185,670 @@ const firebaseConfig = {
   messagingSenderId: "972484258564",
   appId: "1:972484258564:web:31ac5ca3e79aef62437e51"
 };
-// ====================================================
+
+const MAX_PHOTO_PX = 520;
+const PHOTO_QUALITY = 0.72;
+const PHOTO_WARN_BYTES = 380 * 1024;
 
 let db = null;
-let configOk = !!firebaseConfig.apiKey;
+let configOk = false;
+let matchHistory = [];
+let comments = [];
+let busy = false;
 
-if(configOk){
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-} else {
-  document.getElementById('cfgWarning').style.display = 'block';
-  document.getElementById('status').textContent = 'Firebase config bekleniyor';
-}
-
-const DOC_REF = () => db.collection('kapisma').doc('mac');
-
+let photos = { 1: '', 2: '' };
+let videos = { 1: [], 2: [] };
 let stats = [
-  {label:"Gol", v1:0, v2:0},
-  {label:"Asist", v1:0, v2:0},
-  {label:"Maç", v1:0, v2:0},
-  {label:"Şut İsabeti (%)", v1:0, v2:0},
-  {label:"Pas İsabeti (%)", v1:0, v2:0},
-  {label:"Sarı Kart", v1:0, v2:0},
-  {label:"Kırmızı Kart", v1:0, v2:0},
-  {label:"Hız (km/s)", v1:0, v2:0}
+  { label: 'Gol', v1: 0, v2: 0, score: true },
+  { label: 'Asist', v1: 0, v2: 0, score: true },
+  { label: 'Oynanan maç', v1: 0, v2: 0, score: false },
+  { label: 'Şut isabeti (%)', v1: 0, v2: 0, score: true },
+  { label: 'Pas isabeti (%)', v1: 0, v2: 0, score: true }
 ];
 
-function renderStats(){
-  const body = document.getElementById('statsBody');
-  body.innerHTML = '';
-  stats.forEach((s,i)=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><input type="text" value="${s.label}" onchange="stats[${i}].label=this.value"></td>
-      <td><input type="number" step="any" value="${s.v1}" onchange="stats[${i}].v1=parseFloat(this.value)||0"></td>
-      <td><input type="number" step="any" value="${s.v2}" onchange="stats[${i}].v2=parseFloat(this.value)||0"></td>
-      <td><button class="del-btn" onclick="removeStat(${i})">✕</button></td>
-    `;
-    body.appendChild(tr);
+document.getElementById('buildLine').textContent = 'Sürüm ' + window.APP_BUILD;
+
+try {
+  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    configOk = true;
+  }
+} catch (err) {
+  configOk = false;
+}
+
+if (!configOk) {
+  document.getElementById('cfgWarning').style.display = 'block';
+  setStatus('Firebase bağlantısı yok, kayıt yapılamaz', true);
+}
+
+const DOC = () => db.collection('kapisma').doc('mac');
+const MATCHES = () => db.collection('kapisma_matches');
+const COMMENTS = () => db.collection('kapisma_comments');
+
+/* ---------- yardımcılar ---------- */
+
+function el(id) { return document.getElementById(id); }
+
+function setStatus(msg, isError, isBusy) {
+  const s = el('status');
+  s.textContent = msg;
+  s.className = 'status' + (isError ? ' error' : (isBusy ? ' busy' : ''));
+}
+
+function setBusy(state) {
+  busy = state;
+  ['saveMatchBtn', 'saveOnlyBtn', 'clearBtn'].forEach(id => { el(id).disabled = state; });
+}
+
+function safeUrl(value) {
+  const s = String(value == null ? '' : value).trim();
+  if (/^https?:\/\//i.test(s)) return s;
+  if (/^data:image\/(png|jpe?g|gif|webp);base64,/i.test(s)) return s;
+  return '';
+}
+
+function trText(node, text) { node.textContent = text == null ? '' : String(text); }
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '-' : d.toLocaleString('tr-TR');
+}
+
+function approxBytes(dataUrl) {
+  const i = String(dataUrl).indexOf(',');
+  if (i < 0) return 0;
+  return Math.round((dataUrl.length - i - 1) * 0.75);
+}
+
+function kb(bytes) { return Math.round(bytes / 1024) + ' KB'; }
+
+/* ---------- fotoğraf yükleme ---------- */
+
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//i.test(file.type)) { reject(new Error('Bu dosya bir görsel değil')); return; }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Dosya okunamadı'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Görsel çözümlenemedi'));
+      img.onload = () => {
+        let w = img.naturalWidth || img.width;
+        let h = img.naturalHeight || img.height;
+        if (!w || !h) { reject(new Error('Görsel boyutu okunamadı')); return; }
+        const scale = Math.min(1, MAX_PHOTO_PX / Math.max(w, h));
+        w = Math.max(1, Math.round(w * scale));
+        h = Math.max(1, Math.round(h * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#0d1117';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        try {
+          resolve(canvas.toDataURL('image/jpeg', PHOTO_QUALITY));
+        } catch (e) {
+          reject(new Error('Görsel dönüştürülemedi'));
+        }
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
   });
 }
 
-function addStat(){
-  const input = document.getElementById('newStatLabel');
-  const label = input.value.trim();
-  if(!label) return;
-  stats.push({label:label, v1:0, v2:0});
-  input.value = '';
-  renderStats();
+function renderPhoto(slot) {
+  const img = el('photoPreview' + slot);
+  const meta = el('photoMeta' + slot);
+  const src = safeUrl(photos[slot]);
+  if (src) {
+    img.src = src;
+    img.style.display = 'block';
+    img.onerror = () => { img.style.display = 'none'; trText(meta, 'Görsel açılamadı, adresi kontrol et'); };
+    const isUpload = src.startsWith('data:');
+    const size = isUpload ? approxBytes(src) : 0;
+    trText(meta, isUpload ? ('Yüklenen görsel, ' + kb(size) + (size > PHOTO_WARN_BYTES ? ' — bu biraz büyük, daha küçük bir dosya dene' : '')) : 'Dış adresten görsel');
+  } else {
+    img.removeAttribute('src');
+    img.style.display = 'none';
+    trText(meta, '');
+  }
 }
 
-function removeStat(i){ stats.splice(i,1); renderStats(); }
+function bindPhoto(slot) {
+  const urlInput = el('photoUrl' + slot);
+  const fileInput = el('photoFile' + slot);
 
-function buildData(){
+  urlInput.addEventListener('input', () => {
+    const v = safeUrl(urlInput.value);
+    photos[slot] = v;
+    renderPhoto(slot);
+  });
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    trText(el('photoMeta' + slot), 'Görsel işleniyor…');
+    try {
+      const dataUrl = await compressImage(file);
+      photos[slot] = dataUrl;
+      urlInput.value = '';
+      renderPhoto(slot);
+    } catch (err) {
+      trText(el('photoMeta' + slot), err.message);
+    }
+    fileInput.value = '';
+  });
+
+  el('photoClear' + slot).addEventListener('click', () => {
+    photos[slot] = '';
+    urlInput.value = '';
+    renderPhoto(slot);
+  });
+}
+
+bindPhoto(1);
+bindPhoto(2);
+
+/* ---------- video bağlantıları ---------- */
+
+function renderVideos(slot) {
+  const wrap = el('videoList' + slot);
+  wrap.innerHTML = '';
+  if (videos[slot].length === 0) {
+    const p = document.createElement('div');
+    p.className = 'empty';
+    p.textContent = 'Bağlantı yok';
+    wrap.appendChild(p);
+    return;
+  }
+  videos[slot].forEach((v, i) => {
+    const row = document.createElement('div');
+    row.className = 'video-item';
+
+    const title = document.createElement('input');
+    title.type = 'text';
+    title.maxLength = 40;
+    title.placeholder = 'Başlık';
+    title.value = v.title || '';
+    title.addEventListener('input', () => { videos[slot][i].title = title.value; });
+
+    const url = document.createElement('input');
+    url.type = 'url';
+    url.placeholder = 'https://…';
+    url.value = v.url || '';
+    url.addEventListener('input', () => { videos[slot][i].url = url.value; });
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'del-btn';
+    del.textContent = '✕';
+    del.setAttribute('aria-label', 'Bağlantıyı sil');
+    del.addEventListener('click', () => { videos[slot].splice(i, 1); renderVideos(slot); });
+
+    row.append(title, url, del);
+    wrap.appendChild(row);
+  });
+}
+
+el('addVideo1').addEventListener('click', () => { videos[1].push({ title: '', url: '' }); renderVideos(1); });
+el('addVideo2').addEventListener('click', () => { videos[2].push({ title: '', url: '' }); renderVideos(2); });
+
+/* ---------- istatistikler ---------- */
+
+function numInput(value, onChange) {
+  const inp = document.createElement('input');
+  inp.type = 'number';
+  inp.step = 'any';
+  inp.value = value;
+  inp.addEventListener('input', () => onChange(parseFloat(inp.value) || 0));
+  return inp;
+}
+
+function renderStats() {
+  const body = el('statsBody');
+  body.innerHTML = '';
+  stats.forEach((s, i) => {
+    const tr = document.createElement('tr');
+
+    const tdLabel = document.createElement('td');
+    const label = document.createElement('input');
+    label.type = 'text';
+    label.maxLength = 40;
+    label.value = s.label || '';
+    label.addEventListener('input', () => { stats[i].label = label.value; renderLiveScore(); });
+    tdLabel.appendChild(label);
+
+    const td1 = document.createElement('td');
+    td1.appendChild(numInput(s.v1, val => { stats[i].v1 = val; renderLiveScore(); }));
+
+    const td2 = document.createElement('td');
+    td2.appendChild(numInput(s.v2, val => { stats[i].v2 = val; renderLiveScore(); }));
+
+    const tdScore = document.createElement('td');
+    tdScore.className = 'mid';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = s.score !== false;
+    cb.title = 'Bu satır maçın kazananını belirlerken sayılsın';
+    cb.addEventListener('change', () => { stats[i].score = cb.checked; renderLiveScore(); });
+    tdScore.appendChild(cb);
+
+    const tdDel = document.createElement('td');
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'del-btn';
+    del.textContent = '✕';
+    del.setAttribute('aria-label', 'Satırı sil');
+    del.addEventListener('click', () => { stats.splice(i, 1); renderStats(); });
+    tdDel.appendChild(del);
+
+    tr.append(tdLabel, td1, td2, tdScore, tdDel);
+    body.appendChild(tr);
+  });
+  renderLiveScore();
+}
+
+el('addStatBtn').addEventListener('click', () => {
+  const input = el('newStatLabel');
+  const label = input.value.trim();
+  if (!label) return;
+  stats.push({ label: label, v1: 0, v2: 0, score: true });
+  input.value = '';
+  renderStats();
+});
+
+el('newStatLabel').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); el('addStatBtn').click(); }
+});
+
+function computeWinner(list) {
+  let w1 = 0, w2 = 0, counted = 0;
+  (list || []).forEach(s => {
+    if (s.score === false) return;
+    counted++;
+    const v1 = parseFloat(s.v1) || 0;
+    const v2 = parseFloat(s.v2) || 0;
+    if (v1 > v2) w1++; else if (v2 > v1) w2++;
+  });
+  return { w1: w1, w2: w2, counted: counted };
+}
+
+function renderLiveScore() {
+  const r = computeWinner(stats);
+  const n1 = el('name1').value.trim() || 'Oyuncu 1';
+  const n2 = el('name2').value.trim() || 'Oyuncu 2';
+  const box = el('liveScore');
+  box.innerHTML = '';
+  const line = document.createElement('div');
+  if (r.counted === 0) {
+    line.textContent = 'Skora dahil edilen istatistik yok, bu maç berabere sayılır.';
+  } else {
+    const strong = document.createElement('b');
+    strong.textContent = n1 + ' ' + r.w1 + ' - ' + r.w2 + ' ' + n2;
+    line.append('Bu maçın skoru: ', strong, ' (' + r.counted + ' satır sayıldı)');
+  }
+  box.appendChild(line);
+}
+
+el('name1').addEventListener('input', () => { renderLiveScore(); renderH2H(); });
+el('name2').addEventListener('input', () => { renderLiveScore(); renderH2H(); });
+
+/* ---------- maç geçmişi ---------- */
+
+function renderH2H() {
+  const box = el('h2hPreview');
+  box.innerHTML = '';
+  const n1 = el('name1').value.trim() || 'Oyuncu 1';
+  const n2 = el('name2').value.trim() || 'Oyuncu 2';
+  if (matchHistory.length === 0) {
+    box.textContent = 'Kayıtlı maç yok. Kaydet ve maç olarak işle dediğinde ilk kayıt oluşur.';
+    return;
+  }
+  let w1 = 0, w2 = 0, draw = 0;
+  matchHistory.forEach(m => {
+    if (m.w1 > m.w2) w1++; else if (m.w2 > m.w1) w2++; else draw++;
+  });
+  const seasons = Array.from(new Set(matchHistory.map(m => m.season).filter(Boolean)));
+
+  const l1 = document.createElement('div');
+  const b1 = document.createElement('b');
+  b1.textContent = matchHistory.length + ' maç kayıtlı';
+  l1.appendChild(b1);
+
+  const l2 = document.createElement('div');
+  l2.textContent = 'H2H: ' + n1 + ' ' + w1 + ' - ' + w2 + ' ' + n2 + ' (berabere ' + draw + ')';
+
+  const l3 = document.createElement('div');
+  l3.textContent = 'Sezonlar: ' + (seasons.join(', ') || '-');
+
+  box.append(l1, l2, l3);
+}
+
+function renderMatchList() {
+  const wrap = el('matchList');
+  wrap.innerHTML = '';
+  if (matchHistory.length === 0) {
+    const p = document.createElement('div');
+    p.className = 'empty';
+    p.textContent = 'Liste boş';
+    wrap.appendChild(p);
+    return;
+  }
+  matchHistory.forEach(m => {
+    const row = document.createElement('div');
+    row.className = 'list-row';
+
+    const left = document.createElement('div');
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = (m.name1 || 'Oyuncu 1') + ' ' + m.w1 + ' - ' + m.w2 + ' ' + (m.name2 || 'Oyuncu 2');
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = (m.season || 'Sezon yok') + ' · ' + fmtDate(m.date);
+    left.append(who, meta);
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'del-btn';
+    del.textContent = '✕';
+    del.setAttribute('aria-label', 'Maç kaydını sil');
+    del.addEventListener('click', () => deleteMatch(m.id));
+
+    row.append(left, del);
+    wrap.appendChild(row);
+  });
+}
+
+async function deleteMatch(id) {
+  if (!configOk || !id) return;
+  if (!confirm('Bu maç kaydı silinsin mi? H2H rekoru yeniden hesaplanır.')) return;
+  try {
+    await MATCHES().doc(id).delete();
+    matchHistory = matchHistory.filter(m => m.id !== id);
+    renderH2H();
+    renderMatchList();
+    setStatus('Maç kaydı silindi');
+  } catch (err) {
+    setStatus('Silinemedi: ' + err.message, true);
+  }
+}
+
+/* ---------- yorumlar ---------- */
+
+function renderComments() {
+  const wrap = el('commentList');
+  wrap.innerHTML = '';
+  if (comments.length === 0) {
+    const p = document.createElement('div');
+    p.className = 'empty';
+    p.textContent = 'Henüz yorum yok';
+    wrap.appendChild(p);
+    return;
+  }
+  comments.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'list-row';
+
+    const left = document.createElement('div');
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = c.name || 'Anonim';
+    const body = document.createElement('div');
+    body.className = 'body';
+    body.textContent = c.message || '';
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = fmtDate(c.time);
+    left.append(who, body, meta);
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'del-btn';
+    del.textContent = '✕';
+    del.setAttribute('aria-label', 'Yorumu sil');
+    del.addEventListener('click', async () => {
+      if (!confirm('Bu yorum silinsin mi?')) return;
+      try { await COMMENTS().doc(c.id).delete(); }
+      catch (err) { setStatus('Yorum silinemedi: ' + err.message, true); }
+    });
+
+    row.append(left, del);
+    wrap.appendChild(row);
+  });
+}
+
+/* ---------- kaydetme ---------- */
+
+function buildDoc() {
+  const cleanStats = stats
+    .map(s => ({
+      label: String(s.label || '').trim().slice(0, 40),
+      v1: parseFloat(s.v1) || 0,
+      v2: parseFloat(s.v2) || 0,
+      score: s.score !== false
+    }))
+    .filter(s => s.label);
+
+  const cleanVideos = slot => videos[slot]
+    .map(v => ({ title: String(v.title || '').trim().slice(0, 40), url: safeUrl(v.url) }))
+    .filter(v => v.url);
+
   return {
-    player1:{name:document.getElementById('name1').value || 'Oyuncu 1', team:document.getElementById('team1').value},
-    player2:{name:document.getElementById('name2').value || 'Oyuncu 2', team:document.getElementById('team2').value},
-    stats: stats
+    player1: {
+      name: el('name1').value.trim().slice(0, 60) || 'Oyuncu 1',
+      team: el('team1').value.trim().slice(0, 60),
+      photo: safeUrl(photos[1])
+    },
+    player2: {
+      name: el('name2').value.trim().slice(0, 60) || 'Oyuncu 2',
+      team: el('team2').value.trim().slice(0, 60),
+      photo: safeUrl(photos[2])
+    },
+    season: el('season').value.trim().slice(0, 40) || 'Sezon yok',
+    videos: { list1: cleanVideos(1), list2: cleanVideos(2) },
+    stats: cleanStats,
+    build: window.APP_BUILD,
+    updatedAt: new Date().toISOString()
   };
 }
 
-function setStatus(msg, isError){
-  const el = document.getElementById('status');
-  el.textContent = msg;
-  el.className = 'status' + (isError ? ' error' : '');
-}
+async function save(recordMatch) {
+  if (!configOk) { setStatus('Firebase bağlantısı yok, kayıt yapılamaz', true); return; }
+  if (busy) return;
+  const data = buildDoc();
+  if (data.stats.length === 0) { setStatus('En az bir istatistik satırı gerekli', true); return; }
 
-async function saveData(){
-  if(!configOk){ setStatus('✗ Önce Firebase config gir', true); return; }
-  const btn = document.getElementById('saveBtn');
-  btn.disabled = true;
-  setStatus('Kaydediliyor…');
-  try{
-    await DOC_REF().set(buildData());
-    setStatus('✓ Kaydedildi — tüm cihazlarda anında görünür');
-  }catch(err){
-    setStatus('✗ Hata: ' + err.message, true);
-  }
-  btn.disabled = false;
-}
+  const photoBytes = approxBytes(data.player1.photo) + approxBytes(data.player2.photo);
+  if (photoBytes > 800 * 1024) { setStatus('Fotoğraflar çok büyük, daha küçük dosyalar yükle', true); return; }
 
-function applyData(data){
-  if(!data) return;
-  document.getElementById('name1').value = data.player1?.name || 'Oyuncu 1';
-  document.getElementById('team1').value = data.player1?.team || '';
-  document.getElementById('name2').value = data.player2?.name || 'Oyuncu 2';
-  document.getElementById('team2').value = data.player2?.team || '';
-  stats = Array.isArray(data.stats) ? data.stats : [];
-  renderStats();
-}
+  setBusy(true);
+  setStatus(recordMatch ? 'Maç kaydediliyor…' : 'Tablo güncelleniyor…', false, true);
+  try {
+    await DOC().set(data);
 
-async function loadData(){
-  if(!configOk) return;
-  setStatus('Yükleniyor…');
-  try{
-    const snap = await DOC_REF().get();
-    if(snap.exists){
-      applyData(snap.data());
-      setStatus('✓ Güncel veri yüklendi');
-    }else{
-      renderStats();
-      setStatus('Henüz kayıtlı veri yok — girip kaydet');
+    if (recordMatch) {
+      const r = computeWinner(data.stats);
+      const record = {
+        date: new Date().toISOString(),
+        season: data.season,
+        name1: data.player1.name,
+        name2: data.player2.name,
+        w1: r.w1,
+        w2: r.w2,
+        stats: data.stats
+      };
+      const ref = await MATCHES().add(record);
+      matchHistory.unshift(Object.assign({ id: ref.id }, record));
+      renderH2H();
+      renderMatchList();
+      setStatus('Maç kaydedildi, H2H rekoru güncellendi');
+    } else {
+      setStatus('Tablo güncellendi, geçmiş değişmedi');
     }
-  }catch(err){
-    renderStats();
-    setStatus('✗ Bağlantı hatası: ' + err.message, true);
+  } catch (err) {
+    setStatus('Kaydedilemedi: ' + err.message, true);
   }
+  setBusy(false);
 }
 
-async function clearAll(){
-  if(!configOk){ setStatus('✗ Önce Firebase config gir', true); return; }
-  if(!confirm('Tüm veriler silinsin mi? (Tüm cihazlarda silinir)')) return;
-  document.getElementById('name1').value = 'Oyuncu 1';
-  document.getElementById('name2').value = 'Oyuncu 2';
-  document.getElementById('team1').value = '';
-  document.getElementById('team2').value = '';
-  stats = [];
+el('saveMatchBtn').addEventListener('click', () => save(true));
+el('saveOnlyBtn').addEventListener('click', () => save(false));
+
+/* ---------- yükleme ve temizleme ---------- */
+
+function applyDoc(data) {
+  if (!data) return;
+  el('name1').value = (data.player1 && data.player1.name) || 'Oyuncu 1';
+  el('team1').value = (data.player1 && data.player1.team) || '';
+  el('name2').value = (data.player2 && data.player2.name) || 'Oyuncu 2';
+  el('team2').value = (data.player2 && data.player2.team) || '';
+  el('season').value = data.season || '';
+
+  photos[1] = safeUrl(data.player1 && data.player1.photo);
+  photos[2] = safeUrl(data.player2 && data.player2.photo);
+  el('photoUrl1').value = photos[1].startsWith('data:') ? '' : photos[1];
+  el('photoUrl2').value = photos[2].startsWith('data:') ? '' : photos[2];
+  renderPhoto(1);
+  renderPhoto(2);
+
+  const v = data.videos || {};
+  if (Array.isArray(v.list1) || Array.isArray(v.list2)) {
+    videos[1] = Array.isArray(v.list1) ? v.list1.slice() : [];
+    videos[2] = Array.isArray(v.list2) ? v.list2.slice() : [];
+  } else {
+    videos[1] = safeUrl(v.link1) ? [{ title: 'Video', url: safeUrl(v.link1) }] : [];
+    videos[2] = safeUrl(v.link2) ? [{ title: 'Video', url: safeUrl(v.link2) }] : [];
+  }
+  renderVideos(1);
+  renderVideos(2);
+
+  const legacyNonScoring = /^(maç|mac|maçlar|oynanan maç|dakika|süre|yaş)$/i;
+  stats = Array.isArray(data.stats) ? data.stats.map(s => ({
+    label: s.label || '',
+    v1: parseFloat(s.v1) || 0,
+    v2: parseFloat(s.v2) || 0,
+    score: typeof s.score === 'boolean' ? s.score : !legacyNonScoring.test(String(s.label || '').trim())
+  })) : [];
   renderStats();
-  try{
-    await DOC_REF().delete();
-    setStatus('✓ Temizlendi');
-  }catch(err){
-    setStatus('✗ Silme hatası: ' + err.message, true);
+}
+
+async function migrateLegacyMatches(data) {
+  const legacy = Array.isArray(data && data.matches) ? data.matches : [];
+  if (legacy.length === 0) return false;
+  const existing = await MATCHES().limit(1).get();
+  if (!existing.empty) return false;
+
+  setStatus('Eski maç geçmişi taşınıyor…', false, true);
+  let batch = db.batch();
+  let n = 0;
+  legacy.forEach(m => {
+    const ref = MATCHES().doc();
+    batch.set(ref, {
+      date: m.date || new Date().toISOString(),
+      season: m.season || 'Sezon yok',
+      name1: (data.player1 && data.player1.name) || 'Oyuncu 1',
+      name2: (data.player2 && data.player2.name) || 'Oyuncu 2',
+      w1: parseFloat(m.w1) || 0,
+      w2: parseFloat(m.w2) || 0,
+      stats: Array.isArray(m.statsSnapshot) ? m.statsSnapshot : []
+    });
+    n++;
+  });
+  await batch.commit();
+  await DOC().update({ matches: firebase.firestore.FieldValue.delete() });
+  return n > 0;
+}
+
+async function loadMatches() {
+  const snap = await MATCHES().orderBy('date', 'desc').limit(300).get();
+  matchHistory = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+  renderH2H();
+  renderMatchList();
+}
+
+async function init() {
+  if (!configOk) { renderStats(); renderVideos(1); renderVideos(2); renderH2H(); renderMatchList(); return; }
+  setStatus('Yükleniyor…', false, true);
+  try {
+    const snap = await DOC().get();
+    const data = snap.exists ? snap.data() : null;
+    if (data) applyDoc(data); else { renderStats(); renderVideos(1); renderVideos(2); }
+
+    let migrated = false;
+    try { migrated = await migrateLegacyMatches(data); }
+    catch (e) { console.warn('Taşıma atlandı:', e.message); }
+
+    await loadMatches();
+
+    COMMENTS().orderBy('time', 'desc').limit(100).onSnapshot(
+      s => { comments = s.docs.map(d => Object.assign({ id: d.id }, d.data())); renderComments(); },
+      e => { el('commentList').innerHTML = '<div class="empty">Yorumlar yüklenemedi</div>'; console.error(e); }
+    );
+
+    if (migrated) setStatus('Eski maç geçmişi ayrı kayıtlara taşındı, veri hazır');
+    else if (data) setStatus('Veri yüklendi');
+    else setStatus('Kayıtlı veri yok, doldurup kaydet');
+  } catch (err) {
+    renderStats();
+    renderVideos(1);
+    renderVideos(2);
+    setStatus('Yüklenemedi: ' + err.message, true);
   }
 }
 
-if(configOk){ loadData(); } else { renderStats(); }
+async function deleteAll(ref) {
+  while (true) {
+    const snap = await ref.limit(300).get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    snap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    if (snap.size < 300) break;
+  }
+}
+
+el('clearBtn').addEventListener('click', async () => {
+  if (!configOk) { setStatus('Firebase bağlantısı yok', true); return; }
+  if (!confirm('Tablo, maç geçmişi ve tüm yorumlar silinecek. Devam edilsin mi?')) return;
+  if (!confirm('Bu geri alınamaz. Emin misin?')) return;
+
+  setBusy(true);
+  setStatus('Siliniyor…', false, true);
+  try {
+    await deleteAll(MATCHES());
+    await deleteAll(COMMENTS());
+    await DOC().delete();
+
+    photos = { 1: '', 2: '' };
+    videos = { 1: [], 2: [] };
+    stats = [];
+    matchHistory = [];
+    el('name1').value = 'Oyuncu 1';
+    el('name2').value = 'Oyuncu 2';
+    el('team1').value = '';
+    el('team2').value = '';
+    el('photoUrl1').value = '';
+    el('photoUrl2').value = '';
+    el('season').value = '';
+    renderPhoto(1);
+    renderPhoto(2);
+    renderVideos(1);
+    renderVideos(2);
+    renderStats();
+    renderH2H();
+    renderMatchList();
+    setStatus('Her şey silindi');
+  } catch (err) {
+    setStatus('Silinemedi: ' + err.message, true);
+  }
+  setBusy(false);
+});
+
+init();
 </script>
 </body>
 </html>

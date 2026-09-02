@@ -7,61 +7,152 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
-  :root{--bg:#0d1117;--card:#161b22;--border:#2a3138;--blue:#2f7ef5;--red:#f5473a;--text:#e6edf3;--muted:#8b949e;}
+  :root{--bg:#0d1117;--card:#161b22;--border:#2a3138;--blue:#2f7ef5;--red:#f5473a;--text:#e6edf3;--muted:#8b949e;--green:#3fb950;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:linear-gradient(180deg,#0d1117,#111a24);color:var(--text);min-height:100vh;padding:24px 12px;}
   .wrap{max-width:900px;margin:0 auto;}
   h1{text-align:center;font-size:1.6rem;margin-bottom:4px;letter-spacing:.5px;}
   .sub{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:24px;}
-  .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green,#3fb950);margin-right:5px;vertical-align:middle;}
-  .players{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;}
-  .player-box{flex:1;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;}
-  .player-box.p1{border-top:3px solid var(--blue);}
-  .player-box.p2{border-top:3px solid var(--red);}
-  .player-box .pname{font-size:1.1rem;font-weight:700;}
-  .player-box .pteam{font-size:.8rem;color:var(--muted);margin-top:2px;}
-  .vs{font-weight:800;color:var(--muted);font-size:1.1rem;padding:0 6px;}
-  .stat-row{display:grid;grid-template-columns:1fr 90px 1fr;align-items:center;gap:10px;margin-bottom:10px;}
-  .stat-label{text-align:center;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:5px;vertical-align:middle;}
+
+  .h2h-score{display:flex;justify-content:space-around;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;}
+  .h2h-item{text-align:center;flex:1;min-width:0;}
+  .h2h-number{font-size:2rem;font-weight:800;}
+  .h2h-item.p1 .h2h-number{color:var(--blue);}
+  .h2h-item.p2 .h2h-number{color:var(--red);}
+  .h2h-label{font-size:.75rem;color:var(--muted);overflow-wrap:break-word;}
+  .h2h-vs{color:var(--muted);font-weight:800;padding:0 6px;}
+  .h2h-sub{text-align:center;font-size:.72rem;color:var(--muted);margin-bottom:20px;}
+
+  .players-container{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+  .player-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  .player-card.p1{border-top:4px solid var(--blue);}
+  .player-card.p2{border-top:4px solid var(--red);}
+  .player-photo{width:100%;height:200px;background:#0d1117;object-fit:cover;display:block;}
+  .player-info{padding:16px;}
+  .pname{font-size:1.1rem;font-weight:700;overflow-wrap:break-word;}
+  .pteam{font-size:.8rem;color:var(--muted);margin-top:2px;}
+
+  .stat-row{display:grid;grid-template-columns:1fr 100px 1fr;align-items:center;gap:10px;margin-bottom:10px;}
+  .stat-label{text-align:center;font-size:.72rem;color:var(--muted);letter-spacing:.3px;overflow-wrap:break-word;}
+  .stat-label .off{display:block;font-size:.6rem;color:#6e7681;margin-top:2px;}
   .stat-val{background:var(--card);border:1px solid var(--border);border-radius:8px;text-align:center;font-size:1rem;font-weight:700;padding:8px 4px;}
-  .stat-val.win{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset;}
-  .stat-val.win.right{border-color:var(--red);box-shadow:0 0 0 1px var(--red) inset;}
+  .stat-val.win-l{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset;}
+  .stat-val.win-r{border-color:var(--red);box-shadow:0 0 0 1px var(--red) inset;}
+  .stat-row.muted .stat-val{opacity:.72;}
   .bar-track{height:6px;background:var(--border);border-radius:3px;margin-top:6px;overflow:hidden;display:flex;}
   .bar-fill-l{background:var(--blue);height:100%;}
   .bar-fill-r{background:var(--red);height:100%;margin-left:auto;}
-  .score-summary{text-align:center;margin-top:26px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;font-size:.9rem;color:var(--muted);}
+
+  .score-summary{text-align:center;margin-top:20px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;font-size:.9rem;color:var(--muted);}
   .score-summary b{color:var(--text);}
-  .controls{display:flex;justify-content:center;gap:10px;margin:22px 0 0;flex-wrap:wrap;}
-  button{background:var(--card);border:1px solid var(--border);color:var(--text);padding:9px 16px;border-radius:8px;font-size:.85rem;cursor:pointer;transition:.15s;}
-  button:hover{background:#1f2733;border-color:var(--blue);}
+
+  .season-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.85rem;}
+  .season-table th{text-align:left;padding:8px;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;}
+  .season-table td{padding:8px;border-bottom:1px solid var(--border);}
+
+  .video-links{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;}
+  .video-col{display:flex;flex-direction:column;gap:8px;}
+  .video-btn{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;font-size:.82rem;text-decoration:none;transition:.15s;}
+  .video-btn:hover{background:#1f2733;}
+  .video-btn.p1{border-color:var(--blue);}
+  .video-btn.p2{border-color:var(--red);}
+  .video-btn img{width:64px;height:36px;object-fit:cover;border-radius:4px;flex-shrink:0;background:#0d1117;}
+  .video-btn span{overflow-wrap:anywhere;}
+
+  .section-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:20px;}
+  .section-box h3{color:var(--blue);font-size:.95rem;margin-bottom:10px;}
+
+  .comment{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;}
+  .comment .cname{font-weight:700;font-size:.82rem;color:var(--blue);overflow-wrap:break-word;}
+  .comment .ctext{font-size:.85rem;color:var(--text);margin-top:2px;white-space:pre-wrap;overflow-wrap:break-word;}
+  .comment .ctime{font-size:.65rem;color:var(--muted);margin-top:4px;}
+  .comment-form{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+  .comment-form input,.comment-form textarea{background:#0d1117;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 10px;font-size:.85rem;outline:none;font-family:inherit;}
+  .comment-form textarea{resize:vertical;min-height:60px;}
+  .comment-form input:focus,.comment-form textarea:focus,button:focus-visible,a:focus-visible{border-color:var(--blue);outline:2px solid var(--blue);outline-offset:1px;}
+  .comment-form button{background:var(--blue);border:none;color:#fff;padding:9px;border-radius:8px;font-size:.85rem;cursor:pointer;font-weight:600;font-family:inherit;}
+  .comment-form button:hover{background:#2568d1;}
+  .comment-form button:disabled{opacity:.5;cursor:not-allowed;}
+  .form-note{font-size:.7rem;color:var(--muted);min-height:14px;}
+  .form-note.error{color:var(--red);}
+  .comment-empty{color:var(--muted);font-size:.82rem;text-align:center;padding:10px;}
+  .comments-scroll{max-height:420px;overflow-y:auto;}
+
+  .gate{position:fixed;inset:0;z-index:50;background:rgba(6,10,16,.92);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;}
+  .gate[hidden]{display:none;}
+  .gate-card{background:var(--card);border:1px solid var(--border);border-top:4px solid var(--blue);border-radius:14px;padding:22px;width:100%;max-width:360px;}
+  .gate-card h2{font-size:1.1rem;margin-bottom:6px;}
+  .gate-card p{font-size:.8rem;color:var(--muted);line-height:1.5;margin-bottom:14px;}
+  .gate-card input{width:100%;background:#0d1117;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:11px 12px;font-size:.95rem;outline:none;font-family:inherit;}
+  .gate-card input:focus{border-color:var(--blue);outline:2px solid var(--blue);outline-offset:1px;}
+  .gate-card button{width:100%;background:var(--blue);border:none;color:#fff;padding:11px;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;margin-top:12px;font-family:inherit;}
+  .gate-card button:hover{background:#2568d1;}
+  .gate-note{font-size:.72rem;color:var(--red);min-height:16px;margin-top:6px;}
+
+  .whoami{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-size:.75rem;color:var(--muted);margin-bottom:18px;}
+  .whoami b{color:var(--text);}
+  .link-btn{background:none;border:none;color:var(--blue);font-size:.75rem;cursor:pointer;text-decoration:underline;padding:0;font-family:inherit;}
+  .you-badge{font-size:.62rem;color:var(--green);border:1px solid var(--green);border-radius:99px;padding:1px 6px;margin-left:6px;vertical-align:middle;}
+  .comment.mine{border-color:#1f4b2c;}
+
+
+  button.plain{background:var(--card);border:1px solid var(--border);color:var(--text);padding:9px 16px;border-radius:8px;font-size:.85rem;cursor:pointer;transition:.15s;font-family:inherit;}
+  button.plain:hover{background:#1f2733;border-color:var(--blue);}
+
   .empty-state{text-align:center;padding:40px 20px;color:var(--muted);background:var(--card);border:1px dashed var(--border);border-radius:14px;}
   .empty-state b{color:var(--text);}
-  footer{text-align:center;color:var(--muted);font-size:.7rem;margin-top:28px;}
+
+  footer{text-align:center;color:var(--muted);font-size:.7rem;margin-top:28px;line-height:1.6;}
   .cfg-warn{background:#3a1a18;border:1px solid var(--red);color:#ffb4ae;border-radius:10px;padding:14px;margin-bottom:20px;font-size:.82rem;line-height:1.5;}
-  @media(max-width:520px){.stat-row{grid-template-columns:1fr 70px 1fr;}h1{font-size:1.3rem;}}
+
+  @media(max-width:600px){
+    .players-container,.video-links{grid-template-columns:1fr;}
+    .h2h-score{flex-direction:row;}
+    .stat-row{grid-template-columns:1fr 78px 1fr;gap:6px;}
+    h1{font-size:1.3rem;}
+  }
+  @media print{
+    body{background:#fff;color:#000;}
+    .controls,.comment-form,footer{display:none;}
+  }
 </style>
 </head>
 <body>
+<div class="gate" id="gate" hidden>
+  <div class="gate-card">
+    <h2>Adını yaz</h2>
+    <p>Tabloyu görmek ve tartışmaya katılmak için bir isim gerekli. Yorumların bu isimle görünür.</p>
+    <input type="text" id="gateName" maxlength="40" placeholder="Adın" autocomplete="nickname">
+    <div class="gate-note" id="gateNote"></div>
+    <button type="button" id="gateGo">Devam et</button>
+  </div>
+</div>
+
 <div class="wrap">
-  <h1>⚽ Kapışma Tablosu</h1>
-  <p class="sub" id="subLine">Veriler admin panelinden işlenir — bu ekran salt görüntülemedir</p>
+  <h1>Kapışma Tablosu</h1>
+  <p class="sub" id="subLine">Veriler admin panelinden girilir</p>
+  <div class="whoami" id="whoami" hidden></div>
 
   <div id="cfgWarning" class="cfg-warn" style="display:none;">
-    <b>Firebase config eksik.</b> Bu dosyanın altındaki <code>firebaseConfig</code> nesnesini
-    <b>futbol-admin.html</b> ile aynı Firebase proje bilgileriyle doldur.
+    <b>Firebase bağlantısı kurulamadı.</b> Sayfadaki firebaseConfig değerlerini kontrol et.
   </div>
 
   <div id="content"><div class="empty-state">Yükleniyor…</div></div>
 
   <div class="controls">
-    <button onclick="window.print()">🖨️ Yazdır / PDF</button>
+    <button class="plain" type="button" onclick="window.print()">Yazdır veya PDF olarak kaydet</button>
   </div>
 
-  <footer>Veri Firestore'dan gerçek zamanlı dinlenir — admin panelinde kaydedilen değişiklik bu sayfada otomatik görünür.</footer>
+  <footer>
+    <span id="buildLine"></span><br>
+    Admin panelinde kaydedilen değişiklikler bu sayfada anında görünür.
+  </footer>
 </div>
 
 <script>
-// ====== BURAYI KENDİ FIREBASE PROJENLE DOLDUR (admin dosyasıyla AYNI olmalı) ======
+window.APP_BUILD = '2026.09.03.2';
+
 const firebaseConfig = {
   apiKey: "AIzaSyByRs32guz2QBcoDFcA_q0BvWo_VuX9bmg",
   authDomain: "kapisma-tablosu.firebaseapp.com",
@@ -70,77 +161,410 @@ const firebaseConfig = {
   messagingSenderId: "972484258564",
   appId: "1:972484258564:web:31ac5ca3e79aef62437e51"
 };
-// ===================================================================
+
+const MAX_NAME = 40;
+const MAX_MESSAGE = 500;
+const COMMENT_COOLDOWN_MS = 20000;
 
 let db = null;
-let configOk = !!firebaseConfig.apiKey;
+let configOk = false;
+let latestData = null;
+let latestMatches = [];
+let latestComments = [];
+let lastCommentAt = 0;
+let viewerName = '';
+let viewerId = '';
 
-function render(data){
-  const content = document.getElementById('content');
-  if(!data || !Array.isArray(data.stats) || data.stats.length === 0){
-    content.innerHTML = `
-      <div class="empty-state">
-        Henüz veri yok.<br>
-        Admin panelinden veri girip <b>Kaydet</b>'e bas.
-      </div>`;
-    return;
+const MIN_NAME = 2;
+
+/* ---------- kimlik ---------- */
+
+const store = (function () {
+  let usable = false;
+  const memory = {};
+  try {
+    window.localStorage.setItem('__kt', '1');
+    window.localStorage.removeItem('__kt');
+    usable = true;
+  } catch (e) {
+    usable = false;
   }
-  const p1 = data.player1 || {name:'Oyuncu 1', team:''};
-  const p2 = data.player2 || {name:'Oyuncu 2', team:''};
-  let statsHtml = '';
-  let w1 = 0, w2 = 0;
-  data.stats.forEach(s => {
-    const v1 = parseFloat(s.v1) || 0;
-    const v2 = parseFloat(s.v2) || 0;
-    const max = Math.max(v1, v2, 1);
-    const pctL = (v1/max)*100;
-    const pctR = (v2/max)*100;
-    const winL = v1 > v2, winR = v2 > v1;
-    if(winL) w1++;
-    if(winR) w2++;
-    statsHtml += `
-      <div class="stat-row">
-        <div class="stat-val ${winL?'win':''}">
-          ${v1}
-          <div class="bar-track"><div class="bar-fill-l" style="width:${pctL}%"></div></div>
-        </div>
-        <div class="stat-label">${s.label}</div>
-        <div class="stat-val right ${winR?'win right':''}">
-          ${v2}
-          <div class="bar-track"><div class="bar-fill-r" style="width:${pctR}%"></div></div>
-        </div>
-      </div>`;
-  });
-  let summaryHtml;
-  if(w1 === w2){
-    summaryHtml = `Skor eşit: <b>${p1.name} ${w1} - ${w2} ${p2.name}</b>`;
-  }else{
-    const leader = w1 > w2 ? p1.name : p2.name;
-    summaryHtml = `Üstün olan: <b>${leader}</b> — istatistik skoru <b>${p1.name} ${w1} - ${w2} ${p2.name}</b>`;
-  }
-  content.innerHTML = `
-    <div class="players">
-      <div class="player-box p1"><div class="pname">${p1.name}</div><div class="pteam">${p1.team || ''}</div></div>
-      <div class="vs">VS</div>
-      <div class="player-box p2"><div class="pname">${p2.name}</div><div class="pteam">${p2.team || ''}</div></div>
-    </div>
-    ${statsHtml}
-    <div class="score-summary">${summaryHtml}</div>
-  `;
+  return {
+    get: function (key) {
+      try { return usable ? window.localStorage.getItem(key) : (memory[key] || null); }
+      catch (e) { return memory[key] || null; }
+    },
+    set: function (key, value) {
+      try { if (usable) window.localStorage.setItem(key, value); else memory[key] = value; }
+      catch (e) { memory[key] = value; }
+    }
+  };
+})();
+
+function cleanName(value) {
+  return String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, MAX_NAME);
 }
 
-if(configOk){
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  document.getElementById('subLine').innerHTML = '<span class="live-dot"></span>Canlı — admin panelindeki değişiklikler anında burada görünür';
+function newId() {
+  return 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function openGate(prefill) {
+  const gate = document.getElementById('gate');
+  const input = document.getElementById('gateName');
+  gate.hidden = false;
+  document.body.style.overflow = 'hidden';
+  input.value = prefill || '';
+  document.getElementById('gateNote').textContent = '';
+  input.focus();
+  input.select();
+}
+
+function closeGate() {
+  document.getElementById('gate').hidden = true;
+  document.body.style.overflow = '';
+}
+
+function submitName() {
+  const name = cleanName(document.getElementById('gateName').value);
+  const note = document.getElementById('gateNote');
+  if (name.length < MIN_NAME) {
+    note.textContent = 'En az ' + MIN_NAME + ' harfli bir isim yaz';
+    document.getElementById('gateName').focus();
+    return;
+  }
+  viewerName = name;
+  store.set('kt_name', name);
+  if (!viewerId) {
+    viewerId = store.get('kt_id') || newId();
+    store.set('kt_id', viewerId);
+  }
+  closeGate();
+  renderWhoami();
+  render();
+}
+
+function renderWhoami() {
+  const box = document.getElementById('whoami');
+  if (!viewerName) { box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = '';
+  const text = document.createElement('span');
+  const b = document.createElement('b');
+  b.textContent = viewerName;
+  text.append('Şu isimle bakıyorsun: ', b);
+  const change = document.createElement('button');
+  change.type = 'button';
+  change.className = 'link-btn';
+  change.textContent = 'İsmi değiştir';
+  change.addEventListener('click', () => openGate(viewerName));
+  box.append(text, change);
+}
+
+document.getElementById('gateGo').addEventListener('click', submitName);
+document.getElementById('gateName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); submitName(); }
+});
+
+viewerId = store.get('kt_id') || '';
+viewerName = cleanName(store.get('kt_name'));
+if (viewerName.length < MIN_NAME) {
+  viewerName = '';
+  openGate('');
+} else {
+  if (!viewerId) { viewerId = newId(); store.set('kt_id', viewerId); }
+  renderWhoami();
+}
+
+document.getElementById('buildLine').textContent = 'Sürüm ' + window.APP_BUILD;
+
+/* ---------- güvenli çıktı ---------- */
+
+const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
+function esc(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, c => ESCAPES[c]);
+}
+
+function safeUrl(value) {
+  const s = String(value == null ? '' : value).trim();
+  if (/^https?:\/\//i.test(s)) return s;
+  if (/^data:image\/(png|jpe?g|gif|webp);base64,/i.test(s)) return s;
+  return '';
+}
+
+function ytId(url) {
+  const m = String(url).match(/(?:youtube\.com\/(?:watch\?(?:[^&]*&)*v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : '';
+}
+
+function num(value) {
+  const n = parseFloat(value);
+  return isFinite(n) ? n : 0;
+}
+
+function fmtNum(n) {
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
+}
+
+/* ---------- hesaplamalar ---------- */
+
+function computeH2H(matches) {
+  let wins1 = 0, wins2 = 0, draws = 0;
+  (matches || []).forEach(m => {
+    const a = num(m.w1), b = num(m.w2);
+    if (a > b) wins1++; else if (b > a) wins2++; else draws++;
+  });
+  return { wins1: wins1, wins2: wins2, draws: draws, total: (matches || []).length };
+}
+
+function computeSeasons(matches) {
+  const map = {};
+  (matches || []).forEach(m => {
+    const s = m.season || 'Sezon yok';
+    if (!map[s]) map[s] = { season: s, matches: 0, wins1: 0, wins2: 0, draws: 0 };
+    map[s].matches++;
+    const a = num(m.w1), b = num(m.w2);
+    if (a > b) map[s].wins1++; else if (b > a) map[s].wins2++; else map[s].draws++;
+  });
+  return Object.keys(map).map(k => map[k]).sort((x, y) => x.season.localeCompare(y.season, 'tr'));
+}
+
+/* ---------- bölümler ---------- */
+
+function h2hSection(p1, p2) {
+  const h = computeH2H(latestMatches);
+  const note = h.total === 0
+    ? 'Henüz kayıtlı maç yok, rekor ilk kayıtla başlar'
+    : h.total + ' kayıtlı maçtan hesaplandı, berabere ' + h.draws;
+  return '<div class="h2h-score">' +
+    '<div class="h2h-item p1"><div class="h2h-number">' + h.wins1 + '</div><div class="h2h-label">' + esc(p1.name) + '</div></div>' +
+    '<div class="h2h-vs">-</div>' +
+    '<div class="h2h-item p2"><div class="h2h-number">' + h.wins2 + '</div><div class="h2h-label">' + esc(p2.name) + '</div></div>' +
+    '</div><p class="h2h-sub">' + esc(note) + '</p>';
+}
+
+function playerCards(p1, p2) {
+  const card = (p, cls) => {
+    const photo = safeUrl(p.photo);
+    return '<div class="player-card ' + cls + '">' +
+      (photo ? '<img src="' + esc(photo) + '" class="player-photo" alt="' + esc(p.name) + '" onerror="this.style.display=\'none\'">' : '') +
+      '<div class="player-info"><div class="pname">' + esc(p.name) + '</div>' +
+      '<div class="pteam">' + esc(p.team || '') + '</div></div></div>';
+  };
+  return '<div class="players-container">' + card(p1, 'p1') + card(p2, 'p2') + '</div>';
+}
+
+function statsSection(statsList) {
+  let html = '';
+  let w1 = 0, w2 = 0, counted = 0;
+  statsList.forEach(s => {
+    const v1 = num(s.v1), v2 = num(s.v2);
+    const scoring = s.score !== false;
+    const max = Math.max(Math.abs(v1), Math.abs(v2), 1);
+    const winL = v1 > v2, winR = v2 > v1;
+    if (scoring) {
+      counted++;
+      if (winL) w1++;
+      if (winR) w2++;
+    }
+    html += '<div class="stat-row' + (scoring ? '' : ' muted') + '">' +
+      '<div class="stat-val ' + (winL ? 'win-l' : '') + '">' + fmtNum(v1) +
+        '<div class="bar-track"><div class="bar-fill-l" style="width:' + (Math.abs(v1) / max * 100) + '%"></div></div></div>' +
+      '<div class="stat-label">' + esc(s.label) + (scoring ? '' : '<span class="off">skora sayılmaz</span>') + '</div>' +
+      '<div class="stat-val ' + (winR ? 'win-r' : '') + '">' + fmtNum(v2) +
+        '<div class="bar-track"><div class="bar-fill-r" style="width:' + (Math.abs(v2) / max * 100) + '%"></div></div></div>' +
+      '</div>';
+  });
+  return { html: html, w1: w1, w2: w2, counted: counted };
+}
+
+function summarySection(p1, p2, score) {
+  let text;
+  if (score.counted === 0) {
+    text = 'Skora dahil edilen istatistik yok';
+  } else if (score.w1 === score.w2) {
+    text = 'Bu maç berabere: <b>' + esc(p1.name) + ' ' + score.w1 + ' - ' + score.w2 + ' ' + esc(p2.name) + '</b>';
+  } else {
+    const leader = score.w1 > score.w2 ? p1.name : p2.name;
+    text = 'Bu maçta üstün olan <b>' + esc(leader) + '</b>, istatistik skoru <b>' +
+      esc(p1.name) + ' ' + score.w1 + ' - ' + score.w2 + ' ' + esc(p2.name) + '</b>';
+  }
+  return '<div class="score-summary">' + text + '</div>';
+}
+
+function seasonSection(p1, p2) {
+  const seasons = computeSeasons(latestMatches);
+  if (seasons.length === 0) return '';
+  const rows = seasons.map(s =>
+    '<tr><td>' + esc(s.season) + '</td><td>' + s.matches + '</td><td>' + s.wins1 + '</td><td>' + s.wins2 + '</td><td>' + s.draws + '</td></tr>'
+  ).join('');
+  return '<div class="section-box"><h3>Sezon karşılaştırması</h3>' +
+    '<table class="season-table"><thead><tr><th>Sezon</th><th>Maç</th><th>' + esc(p1.name) + '</th><th>' + esc(p2.name) + '</th><th>Berabere</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div>';
+}
+
+function normalizeVideos(data) {
+  const v = data.videos || {};
+  const pick = (list, legacy) => {
+    if (Array.isArray(list)) return list;
+    return safeUrl(legacy) ? [{ title: 'Video', url: safeUrl(legacy) }] : [];
+  };
+  return { list1: pick(v.list1, v.link1), list2: pick(v.list2, v.link2) };
+}
+
+function videoSection(p1, p2, data) {
+  const v = normalizeVideos(data);
+  const col = (list, player, cls) => {
+    const items = (list || []).map(item => {
+      const url = safeUrl(item.url);
+      if (!url) return '';
+      const id = ytId(url);
+      const thumb = id ? '<img src="https://img.youtube.com/vi/' + esc(id) + '/mqdefault.jpg" alt="" loading="lazy">' : '';
+      const title = (item.title && String(item.title).trim()) || (id ? 'YouTube videosu' : 'Bağlantı');
+      return '<a class="video-btn ' + cls + '" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' +
+        thumb + '<span>' + esc(title) + '</span></a>';
+    }).join('');
+    if (!items) return '';
+    return '<div class="video-col"><div class="stat-label" style="text-align:left;margin-bottom:2px;">' + esc(player.name) + '</div>' + items + '</div>';
+  };
+  const c1 = col(v.list1, p1, 'p1');
+  const c2 = col(v.list2, p2, 'p2');
+  if (!c1 && !c2) return '';
+  return '<div class="video-links">' + c1 + c2 + '</div>';
+}
+
+/* ---------- ana çizim ---------- */
+
+function render() {
+  const content = document.getElementById('content');
+  const data = latestData;
+
+  const oldText = document.getElementById('commentText');
+  const draft = { text: oldText ? oldText.value : '' };
+
+  if (!data || !Array.isArray(data.stats) || data.stats.length === 0) {
+    content.innerHTML = '<div class="empty-state">Henüz veri yok.<br>Admin panelinden istatistikleri girip <b>Kaydet</b>\'e bas.</div>';
+    return;
+  }
+
+  const p1 = Object.assign({ name: 'Oyuncu 1', team: '', photo: '' }, data.player1 || {});
+  const p2 = Object.assign({ name: 'Oyuncu 2', team: '', photo: '' }, data.player2 || {});
+  const score = statsSection(data.stats);
+
+  content.innerHTML =
+    h2hSection(p1, p2) +
+    playerCards(p1, p2) +
+    score.html +
+    summarySection(p1, p2, score) +
+    seasonSection(p1, p2) +
+    videoSection(p1, p2, data) +
+    '<div class="section-box">' +
+      '<h3>Tartışma</h3>' +
+      '<div class="comments-scroll" id="commentsList"><div class="comment-empty">Yükleniyor…</div></div>' +
+      '<div class="comment-form">' +
+        '<div class="form-note" id="commentAs">Yorumun <b>' + esc(viewerName) + '</b> olarak görünecek. <button type="button" class="link-btn" id="changeName">İsmi değiştir</button></div>' +
+        '<textarea id="commentText" maxlength="' + MAX_MESSAGE + '" placeholder="Ne düşünüyorsun?"></textarea>' +
+        '<div class="form-note" id="commentNote"></div>' +
+        '<button type="button" id="commentSend">Gönder</button>' +
+      '</div>' +
+    '</div>';
+
+  document.getElementById('commentText').value = draft.text;
+  document.getElementById('commentSend').addEventListener('click', postComment);
+  document.getElementById('changeName').addEventListener('click', () => openGate(viewerName));
+  renderComments();
+}
+
+function renderComments() {
+  const list = document.getElementById('commentsList');
+  if (!list) return;
+  if (latestComments.length === 0) {
+    list.innerHTML = '<div class="comment-empty">Henüz yorum yok, ilkini sen yaz</div>';
+    return;
+  }
+  list.innerHTML = latestComments.map(c => {
+    const time = c.time ? new Date(c.time) : null;
+    const when = time && !isNaN(time.getTime()) ? time.toLocaleString('tr-TR') : '';
+    const mine = viewerId && c.uid === viewerId;
+    return '<div class="comment' + (mine ? ' mine' : '') + '">' +
+      '<div class="cname">' + esc(c.name || 'Anonim') + (mine ? '<span class="you-badge">sen</span>' : '') + '</div>' +
+      '<div class="ctext">' + esc(c.message || '') + '</div>' +
+      '<div class="ctime">' + esc(when) + '</div></div>';
+  }).join('');
+}
+
+function setNote(msg, isError) {
+  const note = document.getElementById('commentNote');
+  if (!note) return;
+  note.textContent = msg;
+  note.className = 'form-note' + (isError ? ' error' : '');
+}
+
+async function postComment() {
+  const btn = document.getElementById('commentSend');
+  const textEl = document.getElementById('commentText');
+  if (!btn || !textEl) return;
+
+  if (!db) { setNote('Bağlantı yok, yorum gönderilemiyor', true); return; }
+  if (cleanName(viewerName).length < MIN_NAME) { openGate(''); return; }
+
+  const message = textEl.value.trim().slice(0, MAX_MESSAGE);
+  if (!message) { setNote('Önce bir şeyler yaz', true); return; }
+
+  const wait = COMMENT_COOLDOWN_MS - (Date.now() - lastCommentAt);
+  if (wait > 0) { setNote('Yeni yorum için ' + Math.ceil(wait / 1000) + ' saniye bekle', true); return; }
+
+  btn.disabled = true;
+  setNote('Gönderiliyor…');
+  try {
+    await db.collection('kapisma_comments').add({
+      name: viewerName,
+      uid: viewerId,
+      message: message,
+      time: new Date().toISOString()
+    });
+    lastCommentAt = Date.now();
+    textEl.value = '';
+    setNote('Yorumun eklendi');
+  } catch (err) {
+    setNote('Gönderilemedi: ' + err.message, true);
+  }
+  btn.disabled = false;
+}
+
+/* ---------- başlangıç ---------- */
+
+try {
+  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    configOk = true;
+  }
+} catch (err) {
+  configOk = false;
+}
+
+if (configOk) {
+  document.getElementById('subLine').innerHTML = '<span class="live-dot"></span>Canlı yayın, admin panelindeki değişiklikler anında yansır';
 
   db.collection('kapisma').doc('mac').onSnapshot(
-    snap => { render(snap.exists ? snap.data() : null); },
-    err => { document.getElementById('content').innerHTML = `<div class="empty-state">Bağlantı hatası: ${err.message}</div>`; }
+    snap => { latestData = snap.exists ? snap.data() : null; render(); },
+    err => { document.getElementById('content').innerHTML = '<div class="empty-state">Tablo yüklenemedi: ' + esc(err.message) + '</div>'; }
+  );
+
+  db.collection('kapisma_matches').orderBy('date', 'desc').limit(300).onSnapshot(
+    snap => { latestMatches = snap.docs.map(d => d.data()); render(); },
+    err => { console.error('Maç geçmişi yüklenemedi:', err); }
+  );
+
+  db.collection('kapisma_comments').orderBy('time', 'desc').limit(100).onSnapshot(
+    snap => { latestComments = snap.docs.map(d => d.data()); renderComments(); },
+    err => { console.error('Yorumlar yüklenemedi:', err); }
   );
 } else {
   document.getElementById('cfgWarning').style.display = 'block';
-  document.getElementById('content').innerHTML = '<div class="empty-state">Firebase config bekleniyor</div>';
+  document.getElementById('content').innerHTML = '<div class="empty-state">Firebase bağlantısı bekleniyor</div>';
 }
 </script>
 </body>
