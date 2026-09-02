@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Futbolcu Kapışma Tablosu</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--border:#2a3138;--blue:#2f7ef5;--red:#f5473a;--text:#e6edf3;--muted:#8b949e;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:linear-gradient(180deg,#0d1117,#111a24);color:var(--text);min-height:100vh;padding:24px 12px;}
+  .wrap{max-width:900px;margin:0 auto;}
+  h1{text-align:center;font-size:1.6rem;margin-bottom:4px;letter-spacing:.5px;}
+  .sub{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:24px;}
+  .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green,#3fb950);margin-right:5px;vertical-align:middle;}
+  .players{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;}
+  .player-box{flex:1;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;}
+  .player-box.p1{border-top:3px solid var(--blue);}
+  .player-box.p2{border-top:3px solid var(--red);}
+  .player-box .pname{font-size:1.1rem;font-weight:700;}
+  .player-box .pteam{font-size:.8rem;color:var(--muted);margin-top:2px;}
+  .vs{font-weight:800;color:var(--muted);font-size:1.1rem;padding:0 6px;}
+  .stat-row{display:grid;grid-template-columns:1fr 90px 1fr;align-items:center;gap:10px;margin-bottom:10px;}
+  .stat-label{text-align:center;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  .stat-val{background:var(--card);border:1px solid var(--border);border-radius:8px;text-align:center;font-size:1rem;font-weight:700;padding:8px 4px;}
+  .stat-val.win{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset;}
+  .stat-val.win.right{border-color:var(--red);box-shadow:0 0 0 1px var(--red) inset;}
+  .bar-track{height:6px;background:var(--border);border-radius:3px;margin-top:6px;overflow:hidden;display:flex;}
+  .bar-fill-l{background:var(--blue);height:100%;}
+  .bar-fill-r{background:var(--red);height:100%;margin-left:auto;}
+  .score-summary{text-align:center;margin-top:26px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;font-size:.9rem;color:var(--muted);}
+  .score-summary b{color:var(--text);}
+  .controls{display:flex;justify-content:center;gap:10px;margin:22px 0 0;flex-wrap:wrap;}
+  button{background:var(--card);border:1px solid var(--border);color:var(--text);padding:9px 16px;border-radius:8px;font-size:.85rem;cursor:pointer;transition:.15s;}
+  button:hover{background:#1f2733;border-color:var(--blue);}
+  .empty-state{text-align:center;padding:40px 20px;color:var(--muted);background:var(--card);border:1px dashed var(--border);border-radius:14px;}
+  .empty-state b{color:var(--text);}
+  footer{text-align:center;color:var(--muted);font-size:.7rem;margin-top:28px;}
+  .cfg-warn{background:#3a1a18;border:1px solid var(--red);color:#ffb4ae;border-radius:10px;padding:14px;margin-bottom:20px;font-size:.82rem;line-height:1.5;}
+  @media(max-width:520px){.stat-row{grid-template-columns:1fr 70px 1fr;}h1{font-size:1.3rem;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⚽ Kapışma Tablosu</h1>
+  <p class="sub" id="subLine">Veriler admin panelinden işlenir — bu ekran salt görüntülemedir</p>
+
+  <div id="cfgWarning" class="cfg-warn" style="display:none;">
+    <b>Firebase config eksik.</b> Bu dosyanın altındaki <code>firebaseConfig</code> nesnesini
+    <b>futbol-admin.html</b> ile aynı Firebase proje bilgileriyle doldur.
+  </div>
+
+  <div id="content"><div class="empty-state">Yükleniyor…</div></div>
+
+  <div class="controls">
+    <button onclick="window.print()">🖨️ Yazdır / PDF</button>
+  </div>
+
+  <footer>Veri Firestore'dan gerçek zamanlı dinlenir — admin panelinde kaydedilen değişiklik bu sayfada otomatik görünür.</footer>
+</div>
+
+<script>
+// ====== BURAYI KENDİ FIREBASE PROJENLE DOLDUR (admin dosyasıyla AYNI olmalı) ======
+const firebaseConfig = {
+  apiKey: "AIzaSyByRs32guz2QBcoDFcA_q0BvWo_VuX9bmg",
+  authDomain: "kapisma-tablosu.firebaseapp.com",
+  projectId: "kapisma-tablosu",
+  storageBucket: "kapisma-tablosu.firebasestorage.app",
+  messagingSenderId: "972484258564",
+  appId: "1:972484258564:web:31ac5ca3e79aef62437e51"
+};
+// ===================================================================
+
+let db = null;
+let configOk = !!firebaseConfig.apiKey;
+
+function render(data){
+  const content = document.getElementById('content');
+  if(!data || !Array.isArray(data.stats) || data.stats.length === 0){
+    content.innerHTML = `
+      <div class="empty-state">
+        Henüz veri yok.<br>
+        Admin panelinden veri girip <b>Kaydet</b>'e bas.
+      </div>`;
+    return;
+  }
+  const p1 = data.player1 || {name:'Oyuncu 1', team:''};
+  const p2 = data.player2 || {name:'Oyuncu 2', team:''};
+  let statsHtml = '';
+  let w1 = 0, w2 = 0;
+  data.stats.forEach(s => {
+    const v1 = parseFloat(s.v1) || 0;
+    const v2 = parseFloat(s.v2) || 0;
+    const max = Math.max(v1, v2, 1);
+    const pctL = (v1/max)*100;
+    const pctR = (v2/max)*100;
+    const winL = v1 > v2, winR = v2 > v1;
+    if(winL) w1++;
+    if(winR) w2++;
+    statsHtml += `
+      <div class="stat-row">
+        <div class="stat-val ${winL?'win':''}">
+          ${v1}
+          <div class="bar-track"><div class="bar-fill-l" style="width:${pctL}%"></div></div>
+        </div>
+        <div class="stat-label">${s.label}</div>
+        <div class="stat-val right ${winR?'win right':''}">
+          ${v2}
+          <div class="bar-track"><div class="bar-fill-r" style="width:${pctR}%"></div></div>
+        </div>
+      </div>`;
+  });
+  let summaryHtml;
+  if(w1 === w2){
+    summaryHtml = `Skor eşit: <b>${p1.name} ${w1} - ${w2} ${p2.name}</b>`;
+  }else{
+    const leader = w1 > w2 ? p1.name : p2.name;
+    summaryHtml = `Üstün olan: <b>${leader}</b> — istatistik skoru <b>${p1.name} ${w1} - ${w2} ${p2.name}</b>`;
+  }
+  content.innerHTML = `
+    <div class="players">
+      <div class="player-box p1"><div class="pname">${p1.name}</div><div class="pteam">${p1.team || ''}</div></div>
+      <div class="vs">VS</div>
+      <div class="player-box p2"><div class="pname">${p2.name}</div><div class="pteam">${p2.team || ''}</div></div>
+    </div>
+    ${statsHtml}
+    <div class="score-summary">${summaryHtml}</div>
+  `;
+}
+
+if(configOk){
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  document.getElementById('subLine').innerHTML = '<span class="live-dot"></span>Canlı — admin panelindeki değişiklikler anında burada görünür';
+
+  db.collection('kapisma').doc('mac').onSnapshot(
+    snap => { render(snap.exists ? snap.data() : null); },
+    err => { document.getElementById('content').innerHTML = `<div class="empty-state">Bağlantı hatası: ${err.message}</div>`; }
+  );
+} else {
+  document.getElementById('cfgWarning').style.display = 'block';
+  document.getElementById('content').innerHTML = '<div class="empty-state">Firebase config bekleniyor</div>';
+}
+</script>
+</body>
+</html>
