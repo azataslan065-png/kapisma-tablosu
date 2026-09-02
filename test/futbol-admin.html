@@ -3,179 +3,286 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kapışma Tablosu — Admin Paneli</title>
+<title>Kapışma Tablosu — Yönetim</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
-  :root{--bg:#0d1117;--card:#161b22;--border:#2a3138;--blue:#2f7ef5;--red:#f5473a;--text:#e6edf3;--muted:#8b949e;--green:#3fb950;--amber:#e3b341;}
+  :root{
+    --pitch:#07180F;
+    --panel:#0D241A;
+    --panel-2:#122E22;
+    --field:#061710;
+    --line:rgba(233,244,236,.13);
+    --chalk:#E9F4EC;
+    --dim:#7E9689;
+    --home:#5AA9FF;
+    --away:#FF6E4E;
+    --gold:#E8C86A;
+    --ok:#5BD08A;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    --cond:'Barlow Condensed','Inter',Arial Narrow,sans-serif;
+    --r:12px;
+  }
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:linear-gradient(180deg,#0d1117,#111a24);color:var(--text);min-height:100vh;padding:24px 12px;}
-  .wrap{max-width:900px;margin:0 auto;}
-  h1{text-align:center;font-size:1.5rem;margin-bottom:4px;}
-  .sub{text-align:center;color:var(--muted);font-size:.82rem;margin-bottom:14px;}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;}
-  .card h2{font-size:.9rem;color:var(--muted);margin-bottom:6px;}
-  .card .hint{font-size:.72rem;color:var(--muted);margin-bottom:14px;line-height:1.5;}
-  .players-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .player-col.p1{border-left:3px solid var(--blue);padding-left:10px;}
-  .player-col.p2{border-left:3px solid var(--red);padding-left:10px;}
-  label{font-size:.72rem;color:var(--muted);display:block;margin-bottom:4px;margin-top:8px;}
-  input[type="text"],input[type="number"],input[type="url"],select{width:100%;background:#0d1117;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 10px;font-size:.9rem;outline:none;font-family:inherit;}
-  input:focus,select:focus,button:focus-visible{border-color:var(--blue);outline:2px solid var(--blue);outline-offset:1px;}
-  .photo-preview{width:100%;height:150px;background:#0d1117;border:1px solid var(--border);border-radius:8px;margin-top:8px;object-fit:cover;display:none;}
-  .file-row{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap;}
-  .file-btn{background:#0d1117;border:1px dashed var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:.78rem;cursor:pointer;flex:1;text-align:center;}
-  .file-btn:hover{border-color:var(--blue);}
-  .file-meta{font-size:.68rem;color:var(--muted);width:100%;}
-  table{width:100%;border-collapse:collapse;margin-top:6px;}
-  th{text-align:left;font-size:.7rem;color:var(--muted);padding:6px 4px;font-weight:600;}
-  td{padding:6px 4px;vertical-align:middle;}
-  td input[type="text"]{font-weight:600;}
+  body{font-family:var(--sans);background:var(--pitch);color:var(--chalk);min-height:100vh;line-height:1.55;padding-bottom:96px;-webkit-font-smoothing:antialiased;}
+  .shell{max-width:900px;margin:0 auto;padding:0 16px;}
+
+  .topbar{
+    position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;
+    gap:12px;padding:14px 0;background:linear-gradient(var(--pitch) 76%,transparent);
+  }
+  .mark{font-family:var(--cond);font-size:1.35rem;font-weight:700;line-height:1;}
+  .mark small{display:block;font-family:var(--sans);font-size:.62rem;font-weight:400;color:var(--dim);}
+  .pill{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:5px 13px;font-size:.74rem;color:var(--dim);}
+  .pill .led{width:7px;height:7px;border-radius:50%;background:var(--ok);flex-shrink:0;}
+  .pill.off .led{background:var(--away);}
+
+  .nav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin-bottom:20px;padding-bottom:2px;}
+  .nav::-webkit-scrollbar{display:none;}
+  .nav button{
+    background:none;border:none;border-bottom:2px solid transparent;color:var(--dim);
+    font:inherit;font-size:.86rem;font-weight:500;padding:8px 12px;cursor:pointer;white-space:nowrap;
+  }
+  .nav button:hover{color:var(--chalk);}
+  .nav button[aria-selected="true"]{color:var(--chalk);border-bottom-color:var(--home);}
+  .nav .count{font-size:.7rem;color:var(--dim);margin-left:5px;}
+  .view[hidden]{display:none;}
+
+  .block{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:14px;}
+  .block h2{font-family:var(--cond);font-size:1.15rem;font-weight:600;margin-bottom:4px;}
+  .block .hint{font-size:.75rem;color:var(--dim);line-height:1.5;margin-bottom:14px;}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+  label{display:block;font-size:.72rem;color:var(--dim);margin:12px 0 5px;}
+  input[type="text"],input[type="url"],input[type="number"],textarea{
+    width:100%;background:var(--field);border:1px solid var(--line);border-radius:9px;
+    color:var(--chalk);font:inherit;font-size:.88rem;padding:10px 11px;outline:none;
+  }
+  input:focus,textarea:focus{border-color:var(--home);}
+  input[type="checkbox"]{accent-color:var(--home);width:17px;height:17px;}
+
+  .who-edit{display:flex;gap:14px;align-items:flex-start;}
+  .who-edit .col{flex:1;min-width:0;}
+  .avatar{
+    width:96px;aspect-ratio:1;border-radius:50%;background:var(--panel-2);
+    border:2px solid var(--line);overflow:hidden;display:grid;place-items:center;flex-shrink:0;
+  }
+  .avatar.home{border-color:var(--home);}
+  .avatar.away{border-color:var(--away);}
+  .avatar img{width:100%;height:100%;object-fit:cover;object-position:center 28%;display:block;}
+  .avatar .mono{font-family:var(--cond);font-weight:700;font-size:1.7rem;color:var(--dim);}
+  .photo-tools{display:flex;flex-direction:column;gap:6px;align-items:center;margin-top:8px;width:96px;}
+  .photo-meta{font-size:.64rem;color:var(--dim);text-align:center;line-height:1.4;}
+
+  .btn{background:var(--home);border:1px solid var(--home);color:#04140C;font:inherit;font-size:.82rem;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;}
+  .btn:hover{filter:brightness(1.08);}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn.ghost{background:transparent;border-color:var(--line);color:var(--chalk);}
+  .btn.ghost:hover{background:var(--panel-2);}
+  .btn.danger{background:transparent;border-color:var(--away);color:var(--away);}
+  .btn.danger:hover{background:rgba(255,110,78,.12);}
+  .btn.tiny{font-size:.72rem;padding:6px 10px;}
+  .btn.wide{width:100%;}
+
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-size:.7rem;font-weight:500;color:var(--dim);padding:8px 6px;border-bottom:1px solid var(--line);}
+  td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
   td.mid{text-align:center;}
-  .del-btn{background:none;border:none;color:var(--red);font-size:1.1rem;cursor:pointer;padding:4px 8px;}
-  .del-btn:hover{opacity:.7;}
-  .add-stat-row{display:flex;gap:8px;margin-top:12px;}
-  .add-stat-row input{flex:1;}
-  button.action{background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:8px;font-size:.85rem;cursor:pointer;transition:.15s;font-family:inherit;}
-  button.action:hover{background:#1f2733;border-color:var(--blue);}
-  button.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
-  button.primary:hover{background:#2568d1;}
-  button.danger{border-color:var(--red);color:var(--red);}
-  button.danger:hover{background:#3a1a18;}
-  button:disabled{opacity:.5;cursor:not-allowed;}
-  .btn-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:18px 0;}
-  .status{text-align:center;font-size:.82rem;color:var(--green);min-height:20px;margin-bottom:6px;}
-  .status.error{color:var(--red);}
-  .status.busy{color:var(--muted);}
-  .preview-box{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:.82rem;color:var(--muted);line-height:1.6;}
-  .preview-box b{color:var(--text);}
-  .video-item{display:grid;grid-template-columns:1fr 1.4fr auto;gap:6px;align-items:center;margin-bottom:6px;}
-  .list-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;}
-  .list-row .meta{font-size:.7rem;color:var(--muted);margin-top:3px;}
-  .list-row .who{font-size:.82rem;font-weight:600;}
-  .list-row .body{font-size:.85rem;margin-top:2px;white-space:pre-wrap;word-break:break-word;}
-  .scroll-list{max-height:340px;overflow-y:auto;}
-  .empty{color:var(--muted);font-size:.8rem;text-align:center;padding:12px;}
-  footer{text-align:center;color:var(--muted);font-size:.7rem;margin-top:24px;line-height:1.6;}
-  .cfg-warn{background:#3a1a18;border:1px solid var(--red);color:#ffb4ae;border-radius:10px;padding:14px;margin-bottom:20px;font-size:.82rem;line-height:1.5;}
-  @media(max-width:600px){
-    .players-grid{grid-template-columns:1fr;}
-    .video-item{grid-template-columns:1fr auto;}
+  .icon-btn{background:none;border:none;color:var(--dim);font-size:1rem;cursor:pointer;padding:4px 7px;border-radius:6px;line-height:1;}
+  .icon-btn:hover{color:var(--away);background:rgba(255,110,78,.1);}
+  .row-add{display:flex;gap:8px;margin-top:14px;}
+  .row-add input{flex:1;}
+
+  .link-row{display:grid;grid-template-columns:1fr 1.5fr auto;gap:6px;align-items:center;margin-bottom:6px;}
+  .item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px;}
+  .item .title{font-family:var(--cond);font-size:1.05rem;font-weight:600;}
+  .item .sub{font-size:.7rem;color:var(--dim);margin-top:2px;}
+  .item .text{font-size:.85rem;margin-top:3px;white-space:pre-wrap;overflow-wrap:anywhere;}
+  .scroller{max-height:400px;overflow-y:auto;}
+  .blank{text-align:center;color:var(--dim);font-size:.8rem;padding:22px;border:1px dashed var(--line);border-radius:10px;}
+  .readout{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:13px;font-size:.82rem;color:var(--dim);line-height:1.7;}
+  .readout b{color:var(--chalk);}
+  .readout .big{font-family:var(--cond);font-size:1.6rem;font-weight:700;color:var(--chalk);}
+
+  .actionbar{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;
+    background:rgba(7,24,15,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+  }
+  .actionbar .inner{max-width:900px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .state{font-size:.76rem;color:var(--dim);flex:1;min-width:140px;}
+  .state.bad{color:var(--away);}
+  .state.good{color:var(--ok);}
+
+  a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--home);outline-offset:2px;}
+
+  @media(max-width:620px){
+    .two{grid-template-columns:1fr;}
+    .link-row{grid-template-columns:1fr auto;}
+    .actionbar .inner{padding:10px 12px;}
+    .state{width:100%;flex:none;}
+    .btn{flex:1;}
   }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Admin Paneli</h1>
-  <p class="sub">Girdiğin veri kapışma tablosunda anında görünür</p>
 
-  <div id="cfgWarning" class="cfg-warn" style="display:none;">
-    <b>Firebase bağlantısı kurulamadı.</b> Sayfadaki firebaseConfig değerlerini kontrol et.
-  </div>
+<div class="shell">
+  <header class="topbar">
+    <div class="mark">Yönetim<small>kapışma tablosu</small></div>
+    <span class="pill" id="connPill"><span class="led"></span><span id="connText">bağlanıyor</span></span>
+  </header>
 
-  <div class="status" id="status">Yükleniyor…</div>
+  <nav class="nav" id="nav" role="tablist">
+    <button type="button" role="tab" data-view="players" aria-selected="true">Oyuncular</button>
+    <button type="button" role="tab" data-view="stats" aria-selected="false">İstatistikler</button>
+    <button type="button" role="tab" data-view="links" aria-selected="false">Bağlantılar</button>
+    <button type="button" role="tab" data-view="history" aria-selected="false">Geçmiş<span class="count" id="cHistory"></span></button>
+    <button type="button" role="tab" data-view="talk" aria-selected="false">Yorumlar<span class="count" id="cTalk"></span></button>
+    <button type="button" role="tab" data-view="settings" aria-selected="false">Ayarlar</button>
+  </nav>
 
-  <div class="card">
-    <h2>Oyuncular</h2>
-    <p class="hint">Fotoğrafı cihazından yükleyebilir ya da bir adres yapıştırabilirsin. Yüklenen görsel 520 piksele küçültülüp sıkıştırılır.</p>
-    <div class="players-grid">
-      <div class="player-col p1">
-        <label for="name1">Oyuncu 1 adı</label>
-        <input type="text" id="name1" maxlength="60" value="Oyuncu 1">
-        <label for="team1">Takım / pozisyon</label>
-        <input type="text" id="team1" maxlength="60">
-        <label for="photoUrl1">Fotoğraf adresi</label>
-        <input type="url" id="photoUrl1" placeholder="https://…">
-        <div class="file-row">
-          <label class="file-btn" for="photoFile1">Cihazdan fotoğraf yükle</label>
-          <input type="file" id="photoFile1" accept="image/*" hidden>
-          <button class="action" type="button" id="photoClear1">Kaldır</button>
-          <span class="file-meta" id="photoMeta1"></span>
+  <!-- OYUNCULAR -->
+  <section class="view" data-view="players">
+    <div class="block">
+      <h2>Oyuncular</h2>
+      <p class="hint">Yüklediğin fotoğraf kare kırpılıp 512 piksele küçültülür, böylece iki oyuncu tabloda aynı ölçüde görünür. Buradaki önizleme kullanıcıların gördüğünün aynısı.</p>
+      <div class="two">
+        <div>
+          <div class="who-edit">
+            <div>
+              <div class="avatar home" id="av1"><span class="mono">O1</span></div>
+              <div class="photo-tools">
+                <label class="btn ghost tiny wide" for="file1" style="margin:0;text-align:center;">Fotoğraf seç</label>
+                <input type="file" id="file1" accept="image/*" hidden>
+                <button class="btn ghost tiny wide" type="button" id="clear1">Kaldır</button>
+                <span class="photo-meta" id="meta1"></span>
+              </div>
+            </div>
+            <div class="col">
+              <label for="name1">Ad</label>
+              <input type="text" id="name1" maxlength="60" value="Oyuncu 1">
+              <label for="team1">Takım veya pozisyon</label>
+              <input type="text" id="team1" maxlength="60">
+              <label for="url1">Fotoğraf adresi</label>
+              <input type="url" id="url1" placeholder="https://…">
+            </div>
+          </div>
         </div>
-        <img id="photoPreview1" class="photo-preview" alt="Oyuncu 1 fotoğrafı">
-      </div>
-      <div class="player-col p2">
-        <label for="name2">Oyuncu 2 adı</label>
-        <input type="text" id="name2" maxlength="60" value="Oyuncu 2">
-        <label for="team2">Takım / pozisyon</label>
-        <input type="text" id="team2" maxlength="60">
-        <label for="photoUrl2">Fotoğraf adresi</label>
-        <input type="url" id="photoUrl2" placeholder="https://…">
-        <div class="file-row">
-          <label class="file-btn" for="photoFile2">Cihazdan fotoğraf yükle</label>
-          <input type="file" id="photoFile2" accept="image/*" hidden>
-          <button class="action" type="button" id="photoClear2">Kaldır</button>
-          <span class="file-meta" id="photoMeta2"></span>
+        <div>
+          <div class="who-edit">
+            <div>
+              <div class="avatar away" id="av2"><span class="mono">O2</span></div>
+              <div class="photo-tools">
+                <label class="btn ghost tiny wide" for="file2" style="margin:0;text-align:center;">Fotoğraf seç</label>
+                <input type="file" id="file2" accept="image/*" hidden>
+                <button class="btn ghost tiny wide" type="button" id="clear2">Kaldır</button>
+                <span class="photo-meta" id="meta2"></span>
+              </div>
+            </div>
+            <div class="col">
+              <label for="name2">Ad</label>
+              <input type="text" id="name2" maxlength="60" value="Oyuncu 2">
+              <label for="team2">Takım veya pozisyon</label>
+              <input type="text" id="team2" maxlength="60">
+              <label for="url2">Fotoğraf adresi</label>
+              <input type="url" id="url2" placeholder="https://…">
+            </div>
+          </div>
         </div>
-        <img id="photoPreview2" class="photo-preview" alt="Oyuncu 2 fotoğrafı">
       </div>
     </div>
-  </div>
 
-  <div class="card">
-    <h2>Sezon</h2>
-    <p class="hint">Maç kaydettiğinde bu etiket kullanılır, sezon karşılaştırması buna göre gruplanır.</p>
-    <input type="text" id="season" maxlength="40" placeholder="örn. 2025-2026" value="2025-2026">
-  </div>
+    <div class="block">
+      <h2>Sezon</h2>
+      <p class="hint">Maç kaydettiğinde bu etiket kullanılır, sezon tablosu buna göre gruplanır.</p>
+      <input type="text" id="season" maxlength="40" placeholder="örn. 2025-2026" value="2025-2026">
+    </div>
+  </section>
 
-  <div class="card">
-    <h2>Video ve bağlantılar</h2>
-    <p class="hint">Her oyuncu için istediğin kadar bağlantı ekleyebilirsin. Sadece http ve https adresleri kaydedilir.</p>
-    <div class="players-grid">
-      <div class="player-col p1">
-        <label>Oyuncu 1 bağlantıları</label>
-        <div id="videoList1"></div>
-        <button class="action" type="button" id="addVideo1" style="margin-top:8px;">Bağlantı ekle</button>
+  <!-- İSTATİSTİKLER -->
+  <section class="view" data-view="stats" hidden>
+    <div class="block">
+      <h2>İstatistikler</h2>
+      <p class="hint">Skor kutusu işaretliyse satır maçın kazananını belirler. Oynanan maç, dakika gibi üstünlük anlatmayan satırlarda işareti kaldır.</p>
+      <table>
+        <thead><tr><th style="width:36%">İstatistik</th><th>Oyuncu 1</th><th>Oyuncu 2</th><th style="width:48px;text-align:center">Skor</th><th style="width:38px"></th></tr></thead>
+        <tbody id="statsBody"></tbody>
+      </table>
+      <div class="row-add">
+        <input type="text" id="newStat" maxlength="40" placeholder="Yeni istatistik adı">
+        <button class="btn ghost" type="button" id="addStat">Ekle</button>
       </div>
-      <div class="player-col p2">
-        <label>Oyuncu 2 bağlantıları</label>
-        <div id="videoList2"></div>
-        <button class="action" type="button" id="addVideo2" style="margin-top:8px;">Bağlantı ekle</button>
+      <div class="readout" id="liveScore" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+  <!-- BAĞLANTILAR -->
+  <section class="view" data-view="links" hidden>
+    <div class="block">
+      <h2>Video ve bağlantılar</h2>
+      <p class="hint">Oyuncu başına istediğin kadar bağlantı ekleyebilirsin. Sadece http ve https adresleri kaydedilir, YouTube bağlantılarında küçük resim otomatik çıkar.</p>
+      <div class="two">
+        <div>
+          <label>Oyuncu 1</label>
+          <div id="links1"></div>
+          <button class="btn ghost tiny" type="button" id="addLink1" style="margin-top:8px;">Bağlantı ekle</button>
+        </div>
+        <div>
+          <label>Oyuncu 2</label>
+          <div id="links2"></div>
+          <button class="btn ghost tiny" type="button" id="addLink2" style="margin-top:8px;">Bağlantı ekle</button>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="card">
-    <h2>İstatistikler</h2>
-    <p class="hint">Skor sütunundaki kutu işaretliyse o satır maçın kazananını belirlerken sayılır. Oynanan maç, dakika gibi üstünlük göstermeyen satırlarda işareti kaldır.</p>
-    <table>
-      <thead><tr><th style="width:34%">İstatistik</th><th>Oyuncu 1</th><th>Oyuncu 2</th><th style="width:52px;text-align:center">Skor</th><th style="width:40px"></th></tr></thead>
-      <tbody id="statsBody"></tbody>
-    </table>
-    <div class="add-stat-row">
-      <input type="text" id="newStatLabel" maxlength="40" placeholder="Yeni istatistik adı, örn. Gol">
-      <button class="action" type="button" id="addStatBtn">Ekle</button>
+  <!-- GEÇMİŞ -->
+  <section class="view" data-view="history" hidden>
+    <div class="block">
+      <h2>Karşılaşma geçmişi</h2>
+      <p class="hint">Her kaydedilen maç ayrı bir kayıttır. H2H rekoru ve sezon tablosu bu listeden hesaplanır.</p>
+      <div class="readout" id="h2h">Yükleniyor…</div>
+      <div class="scroller" id="matchList" style="margin-top:14px;"></div>
     </div>
-    <div class="preview-box" id="liveScore" style="margin-top:12px;"></div>
-  </div>
+  </section>
 
-  <div class="card">
-    <h2>Karşılaşma geçmişi</h2>
-    <p class="hint">Her kaydedilen maç ayrı bir kayıt olur. H2H rekoru ve sezon tablosu bu listeden hesaplanır.</p>
-    <div class="preview-box" id="h2hPreview">Yükleniyor…</div>
-    <div class="scroll-list" id="matchList" style="margin-top:12px;"></div>
-  </div>
+  <!-- YORUMLAR -->
+  <section class="view" data-view="talk" hidden>
+    <div class="block">
+      <h2>Yorumlar</h2>
+      <p class="hint">Tartışmayı ziyaretçiler tablo sayfasından yazar. Buradan silebilirsin.</p>
+      <div class="scroller" id="talkList"><div class="blank">Yükleniyor…</div></div>
+    </div>
+  </section>
 
-  <div class="card">
-    <h2>Tartışma bölümü</h2>
-    <p class="hint">Yorumları ziyaretçiler kapışma tablosundan yazar. Buradan silebilirsin.</p>
-    <div class="scroll-list" id="commentList"><div class="empty">Yükleniyor…</div></div>
-  </div>
+  <!-- AYARLAR -->
+  <section class="view" data-view="settings" hidden>
+    <div class="block">
+      <h2>Durum</h2>
+      <div class="readout" id="sysInfo"></div>
+    </div>
+    <div class="block">
+      <h2>Tehlikeli bölge</h2>
+      <p class="hint">Tabloyu, tüm maç geçmişini ve tüm yorumları kalıcı olarak siler. Geri alınamaz.</p>
+      <button class="btn danger" type="button" id="wipe">Her şeyi sil</button>
+    </div>
+  </section>
+</div>
 
-  <div class="btn-row">
-    <button class="action primary" type="button" id="saveMatchBtn">Kaydet ve maç olarak işle</button>
-    <button class="action" type="button" id="saveOnlyBtn">Sadece tabloyu güncelle</button>
-    <button class="action danger" type="button" id="clearBtn">Her şeyi sil</button>
+<div class="actionbar">
+  <div class="inner">
+    <span class="state" id="state">Yükleniyor…</span>
+    <button class="btn ghost" type="button" id="saveOnly">Tabloyu güncelle</button>
+    <button class="btn" type="button" id="saveMatch">Maç olarak kaydet</button>
   </div>
-
-  <footer>
-    <span id="buildLine"></span><br>
-    Maç olarak işlersen H2H rekoruna yeni bir satır eklenir. Sadece tabloyu güncellersen geçmiş değişmez.
-  </footer>
 </div>
 
 <script>
-window.APP_BUILD = '2026.09.03.2';
+window.APP_BUILD = '2026.09.03.3';
 
 const firebaseConfig = {
   apiKey: "AIzaSyByRs32guz2QBcoDFcA_q0BvWo_VuX9bmg",
@@ -186,18 +293,17 @@ const firebaseConfig = {
   appId: "1:972484258564:web:31ac5ca3e79aef62437e51"
 };
 
-const MAX_PHOTO_PX = 520;
-const PHOTO_QUALITY = 0.72;
-const PHOTO_WARN_BYTES = 380 * 1024;
+const PHOTO_PX = 512;
+const PHOTO_QUALITY = 0.74;
+const PHOTO_WARN = 380 * 1024;
 
 let db = null;
 let configOk = false;
-let matchHistory = [];
-let comments = [];
 let busy = false;
-
+let matches = [];
+let comments = [];
 let photos = { 1: '', 2: '' };
-let videos = { 1: [], 2: [] };
+let links = { 1: [], 2: [] };
 let stats = [
   { label: 'Gol', v1: 0, v2: 0, score: true },
   { label: 'Asist', v1: 0, v2: 0, score: true },
@@ -206,93 +312,88 @@ let stats = [
   { label: 'Pas isabeti (%)', v1: 0, v2: 0, score: true }
 ];
 
-document.getElementById('buildLine').textContent = 'Sürüm ' + window.APP_BUILD;
-
-try {
-  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    configOk = true;
-  }
-} catch (err) {
-  configOk = false;
-}
-
-if (!configOk) {
-  document.getElementById('cfgWarning').style.display = 'block';
-  setStatus('Firebase bağlantısı yok, kayıt yapılamaz', true);
-}
-
-const DOC = () => db.collection('kapisma').doc('mac');
-const MATCHES = () => db.collection('kapisma_matches');
-const COMMENTS = () => db.collection('kapisma_comments');
-
-/* ---------- yardımcılar ---------- */
-
 function el(id) { return document.getElementById(id); }
 
-function setStatus(msg, isError, isBusy) {
-  const s = el('status');
+function setState(msg, tone) {
+  const s = el('state');
   s.textContent = msg;
-  s.className = 'status' + (isError ? ' error' : (isBusy ? ' busy' : ''));
+  s.className = 'state' + (tone ? ' ' + tone : '');
 }
 
-function setBusy(state) {
-  busy = state;
-  ['saveMatchBtn', 'saveOnlyBtn', 'clearBtn'].forEach(id => { el(id).disabled = state; });
+function setBusy(on) {
+  busy = on;
+  ['saveOnly', 'saveMatch', 'wipe'].forEach(function (id) { el(id).disabled = on; });
 }
 
-function safeUrl(value) {
-  const s = String(value == null ? '' : value).trim();
+function safeUrl(v) {
+  const s = String(v == null ? '' : v).trim();
   if (/^https?:\/\//i.test(s)) return s;
   if (/^data:image\/(png|jpe?g|gif|webp);base64,/i.test(s)) return s;
   return '';
 }
 
-function trText(node, text) { node.textContent = text == null ? '' : String(text); }
+function initials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const a = parts[0].charAt(0);
+  const b = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
+  return (a + b).toLocaleUpperCase('tr');
+}
 
 function fmtDate(iso) {
   const d = new Date(iso);
-  return isNaN(d.getTime()) ? '-' : d.toLocaleString('tr-TR');
+  return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) +
+    ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
 
-function approxBytes(dataUrl) {
+function bytesOf(dataUrl) {
   const i = String(dataUrl).indexOf(',');
-  if (i < 0) return 0;
-  return Math.round((dataUrl.length - i - 1) * 0.75);
+  return i < 0 ? 0 : Math.round((dataUrl.length - i - 1) * 0.75);
 }
 
-function kb(bytes) { return Math.round(bytes / 1024) + ' KB'; }
+function kb(n) { return Math.round(n / 1024) + ' KB'; }
 
-/* ---------- fotoğraf yükleme ---------- */
+/* ---------- gezinme ---------- */
 
-function compressImage(file) {
-  return new Promise((resolve, reject) => {
-    if (!file || !/^image\//i.test(file.type)) { reject(new Error('Bu dosya bir görsel değil')); return; }
+el('nav').addEventListener('click', function (e) {
+  const btn = e.target.closest('button[data-view]');
+  if (!btn) return;
+  const view = btn.getAttribute('data-view');
+  el('nav').querySelectorAll('button').forEach(function (b) {
+    b.setAttribute('aria-selected', String(b.getAttribute('data-view') === view));
+  });
+  document.querySelectorAll('section.view').forEach(function (s) {
+    s.hidden = s.getAttribute('data-view') !== view;
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+/* ---------- fotoğraf ---------- */
+
+function squareCrop(file) {
+  return new Promise(function (resolve, reject) {
+    if (!file || !/^image\//i.test(file.type)) { reject(new Error('Bu bir görsel değil')); return; }
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Dosya okunamadı'));
-    reader.onload = () => {
+    reader.onerror = function () { reject(new Error('Dosya okunamadı')); };
+    reader.onload = function () {
       const img = new Image();
-      img.onerror = () => reject(new Error('Görsel çözümlenemedi'));
-      img.onload = () => {
-        let w = img.naturalWidth || img.width;
-        let h = img.naturalHeight || img.height;
+      img.onerror = function () { reject(new Error('Görsel açılamadı')); };
+      img.onload = function () {
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
         if (!w || !h) { reject(new Error('Görsel boyutu okunamadı')); return; }
-        const scale = Math.min(1, MAX_PHOTO_PX / Math.max(w, h));
-        w = Math.max(1, Math.round(w * scale));
-        h = Math.max(1, Math.round(h * scale));
+        const side = Math.min(w, h);
+        const sx = (w - side) / 2;
+        const sy = (h - side) * 0.3;
         const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
+        canvas.width = PHOTO_PX;
+        canvas.height = PHOTO_PX;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#0d1117';
-        ctx.fillRect(0, 0, w, h);
-        ctx.drawImage(img, 0, 0, w, h);
-        try {
-          resolve(canvas.toDataURL('image/jpeg', PHOTO_QUALITY));
-        } catch (e) {
-          reject(new Error('Görsel dönüştürülemedi'));
-        }
+        ctx.fillStyle = '#122E22';
+        ctx.fillRect(0, 0, PHOTO_PX, PHOTO_PX);
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, PHOTO_PX, PHOTO_PX);
+        try { resolve(canvas.toDataURL('image/jpeg', PHOTO_QUALITY)); }
+        catch (e) { reject(new Error('Görsel dönüştürülemedi')); }
       };
       img.src = reader.result;
     };
@@ -300,320 +401,328 @@ function compressImage(file) {
   });
 }
 
-function renderPhoto(slot) {
-  const img = el('photoPreview' + slot);
-  const meta = el('photoMeta' + slot);
+function paintAvatar(slot) {
+  const box = el('av' + slot);
+  const meta = el('meta' + slot);
   const src = safeUrl(photos[slot]);
+  const name = el('name' + slot).value;
+  box.innerHTML = '';
   if (src) {
+    const img = document.createElement('img');
+    img.alt = name;
+    img.addEventListener('error', function () {
+      box.innerHTML = '';
+      const span = document.createElement('span');
+      span.className = 'mono';
+      span.textContent = initials(name);
+      box.appendChild(span);
+      meta.textContent = 'Görsel açılamadı';
+    });
     img.src = src;
-    img.style.display = 'block';
-    img.onerror = () => { img.style.display = 'none'; trText(meta, 'Görsel açılamadı, adresi kontrol et'); };
-    const isUpload = src.startsWith('data:');
-    const size = isUpload ? approxBytes(src) : 0;
-    trText(meta, isUpload ? ('Yüklenen görsel, ' + kb(size) + (size > PHOTO_WARN_BYTES ? ' — bu biraz büyük, daha küçük bir dosya dene' : '')) : 'Dış adresten görsel');
+    box.appendChild(img);
+    if (src.indexOf('data:') === 0) {
+      const size = bytesOf(src);
+      meta.textContent = 'Kare kırpıldı, ' + kb(size) + (size > PHOTO_WARN ? ' — biraz büyük' : '');
+    } else {
+      meta.textContent = 'Dış adres, ortadan kırpılır';
+    }
   } else {
-    img.removeAttribute('src');
-    img.style.display = 'none';
-    trText(meta, '');
+    const span = document.createElement('span');
+    span.className = 'mono';
+    span.textContent = initials(name);
+    box.appendChild(span);
+    meta.textContent = 'Fotoğraf yok, baş harfler görünür';
   }
 }
 
 function bindPhoto(slot) {
-  const urlInput = el('photoUrl' + slot);
-  const fileInput = el('photoFile' + slot);
-
-  urlInput.addEventListener('input', () => {
-    const v = safeUrl(urlInput.value);
-    photos[slot] = v;
-    renderPhoto(slot);
+  el('url' + slot).addEventListener('input', function () {
+    photos[slot] = safeUrl(this.value);
+    paintAvatar(slot);
   });
-
-  fileInput.addEventListener('change', async () => {
-    const file = fileInput.files && fileInput.files[0];
+  el('file' + slot).addEventListener('change', async function () {
+    const file = this.files && this.files[0];
     if (!file) return;
-    trText(el('photoMeta' + slot), 'Görsel işleniyor…');
+    el('meta' + slot).textContent = 'İşleniyor…';
     try {
-      const dataUrl = await compressImage(file);
-      photos[slot] = dataUrl;
-      urlInput.value = '';
-      renderPhoto(slot);
+      photos[slot] = await squareCrop(file);
+      el('url' + slot).value = '';
+      paintAvatar(slot);
     } catch (err) {
-      trText(el('photoMeta' + slot), err.message);
+      el('meta' + slot).textContent = err.message;
     }
-    fileInput.value = '';
+    this.value = '';
   });
-
-  el('photoClear' + slot).addEventListener('click', () => {
+  el('clear' + slot).addEventListener('click', function () {
     photos[slot] = '';
-    urlInput.value = '';
-    renderPhoto(slot);
+    el('url' + slot).value = '';
+    paintAvatar(slot);
+  });
+  el('name' + slot).addEventListener('input', function () {
+    paintAvatar(slot);
+    renderScore();
+    renderH2H();
   });
 }
 
 bindPhoto(1);
 bindPhoto(2);
 
-/* ---------- video bağlantıları ---------- */
+/* ---------- bağlantılar ---------- */
 
-function renderVideos(slot) {
-  const wrap = el('videoList' + slot);
+function renderLinks(slot) {
+  const wrap = el('links' + slot);
   wrap.innerHTML = '';
-  if (videos[slot].length === 0) {
+  if (links[slot].length === 0) {
     const p = document.createElement('div');
-    p.className = 'empty';
+    p.className = 'blank';
     p.textContent = 'Bağlantı yok';
     wrap.appendChild(p);
     return;
   }
-  videos[slot].forEach((v, i) => {
+  links[slot].forEach(function (item, i) {
     const row = document.createElement('div');
-    row.className = 'video-item';
+    row.className = 'link-row';
 
     const title = document.createElement('input');
     title.type = 'text';
     title.maxLength = 40;
     title.placeholder = 'Başlık';
-    title.value = v.title || '';
-    title.addEventListener('input', () => { videos[slot][i].title = title.value; });
+    title.value = item.title || '';
+    title.addEventListener('input', function () { links[slot][i].title = title.value; });
 
     const url = document.createElement('input');
     url.type = 'url';
     url.placeholder = 'https://…';
-    url.value = v.url || '';
-    url.addEventListener('input', () => { videos[slot][i].url = url.value; });
+    url.value = item.url || '';
+    url.addEventListener('input', function () { links[slot][i].url = url.value; });
 
     const del = document.createElement('button');
     del.type = 'button';
-    del.className = 'del-btn';
+    del.className = 'icon-btn';
     del.textContent = '✕';
     del.setAttribute('aria-label', 'Bağlantıyı sil');
-    del.addEventListener('click', () => { videos[slot].splice(i, 1); renderVideos(slot); });
+    del.addEventListener('click', function () { links[slot].splice(i, 1); renderLinks(slot); });
 
     row.append(title, url, del);
     wrap.appendChild(row);
   });
 }
 
-el('addVideo1').addEventListener('click', () => { videos[1].push({ title: '', url: '' }); renderVideos(1); });
-el('addVideo2').addEventListener('click', () => { videos[2].push({ title: '', url: '' }); renderVideos(2); });
+el('addLink1').addEventListener('click', function () { links[1].push({ title: '', url: '' }); renderLinks(1); });
+el('addLink2').addEventListener('click', function () { links[2].push({ title: '', url: '' }); renderLinks(2); });
 
 /* ---------- istatistikler ---------- */
-
-function numInput(value, onChange) {
-  const inp = document.createElement('input');
-  inp.type = 'number';
-  inp.step = 'any';
-  inp.value = value;
-  inp.addEventListener('input', () => onChange(parseFloat(inp.value) || 0));
-  return inp;
-}
 
 function renderStats() {
   const body = el('statsBody');
   body.innerHTML = '';
-  stats.forEach((s, i) => {
+  stats.forEach(function (s, i) {
     const tr = document.createElement('tr');
 
-    const tdLabel = document.createElement('td');
-    const label = document.createElement('input');
-    label.type = 'text';
-    label.maxLength = 40;
-    label.value = s.label || '';
-    label.addEventListener('input', () => { stats[i].label = label.value; renderLiveScore(); });
-    tdLabel.appendChild(label);
+    const tdName = document.createElement('td');
+    const name = document.createElement('input');
+    name.type = 'text';
+    name.maxLength = 40;
+    name.value = s.label || '';
+    name.addEventListener('input', function () { stats[i].label = name.value; });
+    tdName.appendChild(name);
 
-    const td1 = document.createElement('td');
-    td1.appendChild(numInput(s.v1, val => { stats[i].v1 = val; renderLiveScore(); }));
-
-    const td2 = document.createElement('td');
-    td2.appendChild(numInput(s.v2, val => { stats[i].v2 = val; renderLiveScore(); }));
+    const mk = function (key) {
+      const td = document.createElement('td');
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.step = 'any';
+      inp.value = s[key];
+      inp.addEventListener('input', function () { stats[i][key] = parseFloat(inp.value) || 0; renderScore(); });
+      td.appendChild(inp);
+      return td;
+    };
 
     const tdScore = document.createElement('td');
     tdScore.className = 'mid';
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = s.score !== false;
-    cb.title = 'Bu satır maçın kazananını belirlerken sayılsın';
-    cb.addEventListener('change', () => { stats[i].score = cb.checked; renderLiveScore(); });
+    cb.title = 'Maç skoruna sayılsın';
+    cb.addEventListener('change', function () { stats[i].score = cb.checked; renderScore(); });
     tdScore.appendChild(cb);
 
     const tdDel = document.createElement('td');
     const del = document.createElement('button');
     del.type = 'button';
-    del.className = 'del-btn';
+    del.className = 'icon-btn';
     del.textContent = '✕';
     del.setAttribute('aria-label', 'Satırı sil');
-    del.addEventListener('click', () => { stats.splice(i, 1); renderStats(); });
+    del.addEventListener('click', function () { stats.splice(i, 1); renderStats(); });
     tdDel.appendChild(del);
 
-    tr.append(tdLabel, td1, td2, tdScore, tdDel);
+    tr.append(tdName, mk('v1'), mk('v2'), tdScore, tdDel);
     body.appendChild(tr);
   });
-  renderLiveScore();
+  renderScore();
 }
 
-el('addStatBtn').addEventListener('click', () => {
-  const input = el('newStatLabel');
+el('addStat').addEventListener('click', function () {
+  const input = el('newStat');
   const label = input.value.trim();
   if (!label) return;
   stats.push({ label: label, v1: 0, v2: 0, score: true });
   input.value = '';
   renderStats();
 });
-
-el('newStatLabel').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); el('addStatBtn').click(); }
+el('newStat').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') { e.preventDefault(); el('addStat').click(); }
 });
 
-function computeWinner(list) {
+function scoreOf(list) {
   let w1 = 0, w2 = 0, counted = 0;
-  (list || []).forEach(s => {
+  (list || []).forEach(function (s) {
     if (s.score === false) return;
     counted++;
-    const v1 = parseFloat(s.v1) || 0;
-    const v2 = parseFloat(s.v2) || 0;
-    if (v1 > v2) w1++; else if (v2 > v1) w2++;
+    const a = parseFloat(s.v1) || 0, b = parseFloat(s.v2) || 0;
+    if (a > b) w1++; else if (b > a) w2++;
   });
   return { w1: w1, w2: w2, counted: counted };
 }
 
-function renderLiveScore() {
-  const r = computeWinner(stats);
-  const n1 = el('name1').value.trim() || 'Oyuncu 1';
-  const n2 = el('name2').value.trim() || 'Oyuncu 2';
+function names() {
+  return {
+    n1: el('name1').value.trim() || 'Oyuncu 1',
+    n2: el('name2').value.trim() || 'Oyuncu 2'
+  };
+}
+
+function renderScore() {
+  const r = scoreOf(stats);
+  const n = names();
   const box = el('liveScore');
   box.innerHTML = '';
-  const line = document.createElement('div');
   if (r.counted === 0) {
-    line.textContent = 'Skora dahil edilen istatistik yok, bu maç berabere sayılır.';
-  } else {
-    const strong = document.createElement('b');
-    strong.textContent = n1 + ' ' + r.w1 + ' - ' + r.w2 + ' ' + n2;
-    line.append('Bu maçın skoru: ', strong, ' (' + r.counted + ' satır sayıldı)');
-  }
-  box.appendChild(line);
-}
-
-el('name1').addEventListener('input', () => { renderLiveScore(); renderH2H(); });
-el('name2').addEventListener('input', () => { renderLiveScore(); renderH2H(); });
-
-/* ---------- maç geçmişi ---------- */
-
-function renderH2H() {
-  const box = el('h2hPreview');
-  box.innerHTML = '';
-  const n1 = el('name1').value.trim() || 'Oyuncu 1';
-  const n2 = el('name2').value.trim() || 'Oyuncu 2';
-  if (matchHistory.length === 0) {
-    box.textContent = 'Kayıtlı maç yok. Kaydet ve maç olarak işle dediğinde ilk kayıt oluşur.';
+    box.textContent = 'Skora sayılan istatistik yok, bu maç berabere kaydedilir.';
     return;
   }
-  let w1 = 0, w2 = 0, draw = 0;
-  matchHistory.forEach(m => {
-    if (m.w1 > m.w2) w1++; else if (m.w2 > m.w1) w2++; else draw++;
-  });
-  const seasons = Array.from(new Set(matchHistory.map(m => m.season).filter(Boolean)));
-
-  const l1 = document.createElement('div');
-  const b1 = document.createElement('b');
-  b1.textContent = matchHistory.length + ' maç kayıtlı';
-  l1.appendChild(b1);
-
-  const l2 = document.createElement('div');
-  l2.textContent = 'H2H: ' + n1 + ' ' + w1 + ' - ' + w2 + ' ' + n2 + ' (berabere ' + draw + ')';
-
-  const l3 = document.createElement('div');
-  l3.textContent = 'Sezonlar: ' + (seasons.join(', ') || '-');
-
-  box.append(l1, l2, l3);
+  const big = document.createElement('div');
+  big.className = 'big';
+  big.textContent = n.n1 + ' ' + r.w1 + ' - ' + r.w2 + ' ' + n.n2;
+  const sub = document.createElement('div');
+  sub.textContent = r.counted + ' satır skora sayıldı';
+  box.append(big, sub);
 }
 
-function renderMatchList() {
+/* ---------- geçmiş ---------- */
+
+function renderH2H() {
+  const box = el('h2h');
+  const n = names();
+  box.innerHTML = '';
+  el('cHistory').textContent = matches.length ? matches.length : '';
+  if (matches.length === 0) {
+    box.textContent = 'Kayıtlı maç yok. "Maç olarak kaydet" dediğinde ilk kayıt oluşur.';
+    return;
+  }
+  let w1 = 0, w2 = 0, d = 0;
+  matches.forEach(function (m) {
+    if (m.w1 > m.w2) w1++; else if (m.w2 > m.w1) w2++; else d++;
+  });
+  const seasons = [];
+  matches.forEach(function (m) { if (m.season && seasons.indexOf(m.season) < 0) seasons.push(m.season); });
+
+  const big = document.createElement('div');
+  big.className = 'big';
+  big.textContent = n.n1 + ' ' + w1 + ' - ' + w2 + ' ' + n.n2;
+  const line = document.createElement('div');
+  line.textContent = matches.length + ' maç, ' + d + ' beraberlik';
+  const seas = document.createElement('div');
+  seas.textContent = 'Sezonlar: ' + (seasons.join(', ') || 'yok');
+  box.append(big, line, seas);
+}
+
+function renderMatches() {
   const wrap = el('matchList');
   wrap.innerHTML = '';
-  if (matchHistory.length === 0) {
+  if (matches.length === 0) {
     const p = document.createElement('div');
-    p.className = 'empty';
+    p.className = 'blank';
     p.textContent = 'Liste boş';
     wrap.appendChild(p);
     return;
   }
-  matchHistory.forEach(m => {
+  matches.forEach(function (m) {
     const row = document.createElement('div');
-    row.className = 'list-row';
-
+    row.className = 'item';
     const left = document.createElement('div');
-    const who = document.createElement('div');
-    who.className = 'who';
-    who.textContent = (m.name1 || 'Oyuncu 1') + ' ' + m.w1 + ' - ' + m.w2 + ' ' + (m.name2 || 'Oyuncu 2');
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    meta.textContent = (m.season || 'Sezon yok') + ' · ' + fmtDate(m.date);
-    left.append(who, meta);
+    const t = document.createElement('div');
+    t.className = 'title';
+    t.textContent = (m.name1 || 'Oyuncu 1') + ' ' + m.w1 + ' - ' + m.w2 + ' ' + (m.name2 || 'Oyuncu 2');
+    const s = document.createElement('div');
+    s.className = 'sub';
+    s.textContent = (m.season || 'sezon yok') + ', ' + fmtDate(m.date);
+    left.append(t, s);
 
     const del = document.createElement('button');
     del.type = 'button';
-    del.className = 'del-btn';
+    del.className = 'icon-btn';
     del.textContent = '✕';
     del.setAttribute('aria-label', 'Maç kaydını sil');
-    del.addEventListener('click', () => deleteMatch(m.id));
+    del.addEventListener('click', function () { removeMatch(m.id); });
 
     row.append(left, del);
     wrap.appendChild(row);
   });
 }
 
-async function deleteMatch(id) {
+async function removeMatch(id) {
   if (!configOk || !id) return;
   if (!confirm('Bu maç kaydı silinsin mi? H2H rekoru yeniden hesaplanır.')) return;
   try {
-    await MATCHES().doc(id).delete();
-    matchHistory = matchHistory.filter(m => m.id !== id);
+    await db.collection('kapisma_matches').doc(id).delete();
+    matches = matches.filter(function (m) { return m.id !== id; });
     renderH2H();
-    renderMatchList();
-    setStatus('Maç kaydı silindi');
+    renderMatches();
+    setState('Maç kaydı silindi', 'good');
   } catch (err) {
-    setStatus('Silinemedi: ' + err.message, true);
+    setState('Silinemedi: ' + err.message, 'bad');
   }
 }
 
 /* ---------- yorumlar ---------- */
 
 function renderComments() {
-  const wrap = el('commentList');
+  const wrap = el('talkList');
   wrap.innerHTML = '';
+  el('cTalk').textContent = comments.length ? comments.length : '';
   if (comments.length === 0) {
     const p = document.createElement('div');
-    p.className = 'empty';
+    p.className = 'blank';
     p.textContent = 'Henüz yorum yok';
     wrap.appendChild(p);
     return;
   }
-  comments.forEach(c => {
+  comments.forEach(function (c) {
     const row = document.createElement('div');
-    row.className = 'list-row';
-
+    row.className = 'item';
     const left = document.createElement('div');
-    const who = document.createElement('div');
-    who.className = 'who';
-    who.textContent = c.name || 'Anonim';
-    const body = document.createElement('div');
-    body.className = 'body';
-    body.textContent = c.message || '';
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    meta.textContent = fmtDate(c.time);
-    left.append(who, body, meta);
+    const t = document.createElement('div');
+    t.className = 'title';
+    t.textContent = c.name || 'Anonim';
+    const tx = document.createElement('div');
+    tx.className = 'text';
+    tx.textContent = c.message || '';
+    const s = document.createElement('div');
+    s.className = 'sub';
+    s.textContent = fmtDate(c.time);
+    left.append(t, tx, s);
 
     const del = document.createElement('button');
     del.type = 'button';
-    del.className = 'del-btn';
+    del.className = 'icon-btn';
     del.textContent = '✕';
     del.setAttribute('aria-label', 'Yorumu sil');
-    del.addEventListener('click', async () => {
+    del.addEventListener('click', async function () {
       if (!confirm('Bu yorum silinsin mi?')) return;
-      try { await COMMENTS().doc(c.id).delete(); }
-      catch (err) { setStatus('Yorum silinemedi: ' + err.message, true); }
+      try { await db.collection('kapisma_comments').doc(c.id).delete(); }
+      catch (err) { setState('Yorum silinemedi: ' + err.message, 'bad'); }
     });
 
     row.append(left, del);
@@ -624,54 +733,48 @@ function renderComments() {
 /* ---------- kaydetme ---------- */
 
 function buildDoc() {
-  const cleanStats = stats
-    .map(s => ({
+  const cleanStats = stats.map(function (s) {
+    return {
       label: String(s.label || '').trim().slice(0, 40),
       v1: parseFloat(s.v1) || 0,
       v2: parseFloat(s.v2) || 0,
       score: s.score !== false
-    }))
-    .filter(s => s.label);
+    };
+  }).filter(function (s) { return s.label; });
 
-  const cleanVideos = slot => videos[slot]
-    .map(v => ({ title: String(v.title || '').trim().slice(0, 40), url: safeUrl(v.url) }))
-    .filter(v => v.url);
+  const cleanLinks = function (slot) {
+    return links[slot].map(function (v) {
+      return { title: String(v.title || '').trim().slice(0, 40), url: safeUrl(v.url) };
+    }).filter(function (v) { return v.url; });
+  };
 
   return {
-    player1: {
-      name: el('name1').value.trim().slice(0, 60) || 'Oyuncu 1',
-      team: el('team1').value.trim().slice(0, 60),
-      photo: safeUrl(photos[1])
-    },
-    player2: {
-      name: el('name2').value.trim().slice(0, 60) || 'Oyuncu 2',
-      team: el('team2').value.trim().slice(0, 60),
-      photo: safeUrl(photos[2])
-    },
+    player1: { name: el('name1').value.trim().slice(0, 60) || 'Oyuncu 1', team: el('team1').value.trim().slice(0, 60), photo: safeUrl(photos[1]) },
+    player2: { name: el('name2').value.trim().slice(0, 60) || 'Oyuncu 2', team: el('team2').value.trim().slice(0, 60), photo: safeUrl(photos[2]) },
     season: el('season').value.trim().slice(0, 40) || 'Sezon yok',
-    videos: { list1: cleanVideos(1), list2: cleanVideos(2) },
+    videos: { list1: cleanLinks(1), list2: cleanLinks(2) },
     stats: cleanStats,
     build: window.APP_BUILD,
     updatedAt: new Date().toISOString()
   };
 }
 
-async function save(recordMatch) {
-  if (!configOk) { setStatus('Firebase bağlantısı yok, kayıt yapılamaz', true); return; }
+async function save(asMatch) {
+  if (!configOk) { setState('Bağlantı yok, kayıt yapılamaz', 'bad'); return; }
   if (busy) return;
   const data = buildDoc();
-  if (data.stats.length === 0) { setStatus('En az bir istatistik satırı gerekli', true); return; }
-
-  const photoBytes = approxBytes(data.player1.photo) + approxBytes(data.player2.photo);
-  if (photoBytes > 800 * 1024) { setStatus('Fotoğraflar çok büyük, daha küçük dosyalar yükle', true); return; }
+  if (data.stats.length === 0) { setState('En az bir istatistik satırı gerekli', 'bad'); return; }
+  if (bytesOf(data.player1.photo) + bytesOf(data.player2.photo) > 800 * 1024) {
+    setState('Fotoğraflar çok büyük, daha küçük dosya seç', 'bad');
+    return;
+  }
 
   setBusy(true);
-  setStatus(recordMatch ? 'Maç kaydediliyor…' : 'Tablo güncelleniyor…', false, true);
+  setState(asMatch ? 'Maç kaydediliyor…' : 'Tablo güncelleniyor…');
   try {
-    await DOC().set(data);
-
-    if (recordMatch) {
-      const r = computeWinner(data.stats);
+    await db.collection('kapisma').doc('mac').set(data);
+    if (asMatch) {
+      const r = scoreOf(data.stats);
       const record = {
         date: new Date().toISOString(),
         season: data.season,
@@ -681,24 +784,24 @@ async function save(recordMatch) {
         w2: r.w2,
         stats: data.stats
       };
-      const ref = await MATCHES().add(record);
-      matchHistory.unshift(Object.assign({ id: ref.id }, record));
+      const ref = await db.collection('kapisma_matches').add(record);
+      matches.unshift(Object.assign({ id: ref.id }, record));
       renderH2H();
-      renderMatchList();
-      setStatus('Maç kaydedildi, H2H rekoru güncellendi');
+      renderMatches();
+      setState('Maç kaydedildi, rekor güncellendi', 'good');
     } else {
-      setStatus('Tablo güncellendi, geçmiş değişmedi');
+      setState('Tablo güncellendi, geçmiş değişmedi', 'good');
     }
   } catch (err) {
-    setStatus('Kaydedilemedi: ' + err.message, true);
+    setState('Kaydedilemedi: ' + err.message, 'bad');
   }
   setBusy(false);
 }
 
-el('saveMatchBtn').addEventListener('click', () => save(true));
-el('saveOnlyBtn').addEventListener('click', () => save(false));
+el('saveMatch').addEventListener('click', function () { save(true); });
+el('saveOnly').addEventListener('click', function () { save(false); });
 
-/* ---------- yükleme ve temizleme ---------- */
+/* ---------- yükleme ---------- */
 
 function applyDoc(data) {
   if (!data) return;
@@ -710,44 +813,43 @@ function applyDoc(data) {
 
   photos[1] = safeUrl(data.player1 && data.player1.photo);
   photos[2] = safeUrl(data.player2 && data.player2.photo);
-  el('photoUrl1').value = photos[1].startsWith('data:') ? '' : photos[1];
-  el('photoUrl2').value = photos[2].startsWith('data:') ? '' : photos[2];
-  renderPhoto(1);
-  renderPhoto(2);
+  el('url1').value = photos[1].indexOf('data:') === 0 ? '' : photos[1];
+  el('url2').value = photos[2].indexOf('data:') === 0 ? '' : photos[2];
+  paintAvatar(1);
+  paintAvatar(2);
 
   const v = data.videos || {};
   if (Array.isArray(v.list1) || Array.isArray(v.list2)) {
-    videos[1] = Array.isArray(v.list1) ? v.list1.slice() : [];
-    videos[2] = Array.isArray(v.list2) ? v.list2.slice() : [];
+    links[1] = Array.isArray(v.list1) ? v.list1.slice() : [];
+    links[2] = Array.isArray(v.list2) ? v.list2.slice() : [];
   } else {
-    videos[1] = safeUrl(v.link1) ? [{ title: 'Video', url: safeUrl(v.link1) }] : [];
-    videos[2] = safeUrl(v.link2) ? [{ title: 'Video', url: safeUrl(v.link2) }] : [];
+    links[1] = safeUrl(v.link1) ? [{ title: 'Video', url: safeUrl(v.link1) }] : [];
+    links[2] = safeUrl(v.link2) ? [{ title: 'Video', url: safeUrl(v.link2) }] : [];
   }
-  renderVideos(1);
-  renderVideos(2);
+  renderLinks(1);
+  renderLinks(2);
 
-  const legacyNonScoring = /^(maç|mac|maçlar|oynanan maç|dakika|süre|yaş)$/i;
-  stats = Array.isArray(data.stats) ? data.stats.map(s => ({
-    label: s.label || '',
-    v1: parseFloat(s.v1) || 0,
-    v2: parseFloat(s.v2) || 0,
-    score: typeof s.score === 'boolean' ? s.score : !legacyNonScoring.test(String(s.label || '').trim())
-  })) : [];
+  const legacyOff = /^(maç|mac|maçlar|oynanan maç|dakika|süre|yaş)$/i;
+  stats = Array.isArray(data.stats) ? data.stats.map(function (s) {
+    return {
+      label: s.label || '',
+      v1: parseFloat(s.v1) || 0,
+      v2: parseFloat(s.v2) || 0,
+      score: typeof s.score === 'boolean' ? s.score : !legacyOff.test(String(s.label || '').trim())
+    };
+  }) : [];
   renderStats();
 }
 
-async function migrateLegacyMatches(data) {
+async function migrateLegacy(data) {
   const legacy = Array.isArray(data && data.matches) ? data.matches : [];
   if (legacy.length === 0) return false;
-  const existing = await MATCHES().limit(1).get();
+  const existing = await db.collection('kapisma_matches').limit(1).get();
   if (!existing.empty) return false;
 
-  setStatus('Eski maç geçmişi taşınıyor…', false, true);
-  let batch = db.batch();
-  let n = 0;
-  legacy.forEach(m => {
-    const ref = MATCHES().doc();
-    batch.set(ref, {
+  const batch = db.batch();
+  legacy.forEach(function (m) {
+    batch.set(db.collection('kapisma_matches').doc(), {
       date: m.date || new Date().toISOString(),
       season: m.season || 'Sezon yok',
       name1: (data.player1 && data.player1.name) || 'Oyuncu 1',
@@ -756,97 +858,139 @@ async function migrateLegacyMatches(data) {
       w2: parseFloat(m.w2) || 0,
       stats: Array.isArray(m.statsSnapshot) ? m.statsSnapshot : []
     });
-    n++;
   });
   await batch.commit();
-  await DOC().update({ matches: firebase.firestore.FieldValue.delete() });
-  return n > 0;
+  await db.collection('kapisma').doc('mac').update({ matches: firebase.firestore.FieldValue.delete() });
+  return true;
 }
 
-async function loadMatches() {
-  const snap = await MATCHES().orderBy('date', 'desc').limit(300).get();
-  matchHistory = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
-  renderH2H();
-  renderMatchList();
+function renderSysInfo(docExists) {
+  el('sysInfo').innerHTML = '';
+  const rows = [
+    ['Sürüm', window.APP_BUILD],
+    ['Proje', firebaseConfig.projectId],
+    ['Bağlantı', configOk ? 'kurulu' : 'yok'],
+    ['Tablo kaydı', docExists ? 'var' : 'yok'],
+    ['Maç kaydı', String(matches.length)],
+    ['Yorum', String(comments.length)]
+  ];
+  rows.forEach(function (r) {
+    const d = document.createElement('div');
+    const b = document.createElement('b');
+    b.textContent = r[0] + ': ';
+    d.append(b, r[1]);
+    el('sysInfo').appendChild(d);
+  });
 }
 
-async function init() {
-  if (!configOk) { renderStats(); renderVideos(1); renderVideos(2); renderH2H(); renderMatchList(); return; }
-  setStatus('Yükleniyor…', false, true);
-  try {
-    const snap = await DOC().get();
-    const data = snap.exists ? snap.data() : null;
-    if (data) applyDoc(data); else { renderStats(); renderVideos(1); renderVideos(2); }
-
-    let migrated = false;
-    try { migrated = await migrateLegacyMatches(data); }
-    catch (e) { console.warn('Taşıma atlandı:', e.message); }
-
-    await loadMatches();
-
-    COMMENTS().orderBy('time', 'desc').limit(100).onSnapshot(
-      s => { comments = s.docs.map(d => Object.assign({ id: d.id }, d.data())); renderComments(); },
-      e => { el('commentList').innerHTML = '<div class="empty">Yorumlar yüklenemedi</div>'; console.error(e); }
-    );
-
-    if (migrated) setStatus('Eski maç geçmişi ayrı kayıtlara taşındı, veri hazır');
-    else if (data) setStatus('Veri yüklendi');
-    else setStatus('Kayıtlı veri yok, doldurup kaydet');
-  } catch (err) {
-    renderStats();
-    renderVideos(1);
-    renderVideos(2);
-    setStatus('Yüklenemedi: ' + err.message, true);
-  }
-}
-
-async function deleteAll(ref) {
+async function wipeCollection(ref) {
   while (true) {
     const snap = await ref.limit(300).get();
     if (snap.empty) break;
     const batch = db.batch();
-    snap.docs.forEach(d => batch.delete(d.ref));
+    snap.docs.forEach(function (d) { batch.delete(d.ref); });
     await batch.commit();
     if (snap.size < 300) break;
   }
 }
 
-el('clearBtn').addEventListener('click', async () => {
-  if (!configOk) { setStatus('Firebase bağlantısı yok', true); return; }
+el('wipe').addEventListener('click', async function () {
+  if (!configOk) { setState('Bağlantı yok', 'bad'); return; }
   if (!confirm('Tablo, maç geçmişi ve tüm yorumlar silinecek. Devam edilsin mi?')) return;
   if (!confirm('Bu geri alınamaz. Emin misin?')) return;
 
   setBusy(true);
-  setStatus('Siliniyor…', false, true);
+  setState('Siliniyor…');
   try {
-    await deleteAll(MATCHES());
-    await deleteAll(COMMENTS());
-    await DOC().delete();
+    await wipeCollection(db.collection('kapisma_matches'));
+    await wipeCollection(db.collection('kapisma_comments'));
+    await db.collection('kapisma').doc('mac').delete();
 
     photos = { 1: '', 2: '' };
-    videos = { 1: [], 2: [] };
+    links = { 1: [], 2: [] };
     stats = [];
-    matchHistory = [];
+    matches = [];
     el('name1').value = 'Oyuncu 1';
     el('name2').value = 'Oyuncu 2';
     el('team1').value = '';
     el('team2').value = '';
-    el('photoUrl1').value = '';
-    el('photoUrl2').value = '';
+    el('url1').value = '';
+    el('url2').value = '';
     el('season').value = '';
-    renderPhoto(1);
-    renderPhoto(2);
-    renderVideos(1);
-    renderVideos(2);
+    paintAvatar(1);
+    paintAvatar(2);
+    renderLinks(1);
+    renderLinks(2);
     renderStats();
     renderH2H();
-    renderMatchList();
-    setStatus('Her şey silindi');
+    renderMatches();
+    renderSysInfo(false);
+    setState('Her şey silindi', 'good');
   } catch (err) {
-    setStatus('Silinemedi: ' + err.message, true);
+    setState('Silinemedi: ' + err.message, 'bad');
   }
   setBusy(false);
 });
+
+try {
+  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    configOk = true;
+  }
+} catch (e) { configOk = false; }
+
+async function init() {
+  el('connText').textContent = configOk ? 'bağlı' : 'bağlantı yok';
+  if (!configOk) el('connPill').classList.add('off');
+
+  if (!configOk) {
+    renderStats();
+    renderLinks(1);
+    renderLinks(2);
+    renderH2H();
+    renderMatches();
+    renderSysInfo(false);
+    setState('Firebase bağlantısı kurulamadı, config değerlerini kontrol et', 'bad');
+    setBusy(true);
+    return;
+  }
+
+  setState('Yükleniyor…');
+  try {
+    const snap = await db.collection('kapisma').doc('mac').get();
+    const data = snap.exists ? snap.data() : null;
+    if (data) applyDoc(data); else { renderStats(); renderLinks(1); renderLinks(2); }
+
+    let migrated = false;
+    try { migrated = await migrateLegacy(data); }
+    catch (e) { console.warn('Taşıma atlandı:', e.message); }
+
+    const list = await db.collection('kapisma_matches').orderBy('date', 'desc').limit(300).get();
+    matches = list.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+    renderH2H();
+    renderMatches();
+
+    db.collection('kapisma_comments').orderBy('time', 'desc').limit(150).onSnapshot(
+      function (s) {
+        comments = s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+        renderComments();
+        renderSysInfo(!!data);
+      },
+      function (e) { el('talkList').innerHTML = '<div class="blank">Yorumlar yüklenemedi</div>'; console.error(e); }
+    );
+
+    renderSysInfo(!!data);
+    if (migrated) setState('Eski maç geçmişi ayrı kayıtlara taşındı', 'good');
+    else if (data) setState('Veri yüklendi', 'good');
+    else setState('Kayıtlı veri yok, doldurup kaydet');
+  } catch (err) {
+    renderStats();
+    renderLinks(1);
+    renderLinks(2);
+    setState('Yüklenemedi: ' + err.message, 'bad');
+  }
+}
 
 init();
 </script>
