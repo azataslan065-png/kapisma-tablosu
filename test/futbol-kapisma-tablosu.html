@@ -14,6 +14,7 @@
     --pitch:#07180F;
     --panel:#0D241A;
     --panel-2:#122E22;
+    --field:#061710;
     --line:rgba(233,244,236,.13);
     --chalk:#E9F4EC;
     --dim:#7E9689;
@@ -32,12 +33,9 @@
       radial-gradient(circle at 50% 0%,rgba(90,169,255,.07),transparent 55%),
       repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0 46px,transparent 46px 92px);
   }
-  .shell{position:relative;z-index:1;max-width:820px;margin:0 auto;padding:0 16px 64px;}
+  .shell{position:relative;z-index:1;max-width:820px;margin:0 auto;padding:0 16px 56px;}
 
-  .topbar{
-    position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;
-    gap:12px;padding:12px 0;margin-bottom:20px;background:linear-gradient(var(--pitch) 72%,transparent);
-  }
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;margin-bottom:20px;background:linear-gradient(var(--pitch) 72%,transparent);}
   .mark{font-family:var(--cond);font-size:1.35rem;font-weight:700;letter-spacing:.4px;line-height:1;}
   .mark small{display:block;font-family:var(--sans);font-size:.62rem;font-weight:400;color:var(--dim);letter-spacing:.3px;}
   .who{position:relative;}
@@ -66,17 +64,23 @@
   .tally .h{color:var(--home);}
   .tally .a{color:var(--away);}
   .tally .d{color:var(--dim);font-size:.4em;font-weight:500;}
-  .board-note{text-align:center;font-size:.72rem;color:var(--dim);margin-top:16px;}
+  .board-note{position:relative;text-align:center;font-size:.72rem;color:var(--dim);margin-top:16px;}
+  .board-note .stamp{display:block;color:#5C6F64;font-size:.66rem;margin-top:3px;}
+  .season-pick{position:relative;display:flex;justify-content:center;margin-top:12px;}
   .reveal{animation:rise .45s ease-out both;}
   @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
   @media(prefers-reduced-motion:reduce){.reveal{animation:none;}}
 
+  select{background:var(--field);border:1px solid var(--line);border-radius:8px;color:var(--chalk);font:inherit;font-size:.78rem;padding:7px 10px;outline:none;cursor:pointer;}
+  select:focus{border-color:var(--home);}
+
   .tabs{display:flex;gap:4px;margin:22px 0 16px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
   .tabs::-webkit-scrollbar{display:none;}
-  .tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--dim);font:inherit;font-size:.86rem;font-weight:500;padding:8px 12px;cursor:pointer;white-space:nowrap;}
+  .tab{position:relative;background:none;border:none;border-bottom:2px solid transparent;color:var(--dim);font:inherit;font-size:.86rem;font-weight:500;padding:8px 12px;cursor:pointer;white-space:nowrap;}
   .tab:hover{color:var(--chalk);}
   .tab[aria-selected="true"]{color:var(--chalk);border-bottom-color:var(--home);}
   .tab .count{font-size:.7rem;color:var(--dim);margin-left:5px;}
+  .tab .ping{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--away);margin-left:6px;vertical-align:middle;}
   .panel[hidden]{display:none;}
 
   .stat{padding:12px 0;border-bottom:1px solid var(--line);}
@@ -119,28 +123,39 @@
   .vid .ph{width:76px;height:44px;border-radius:7px;background:var(--panel-2);display:grid;place-items:center;color:var(--dim);font-size:.7rem;flex-shrink:0;}
   .vid span{font-size:.84rem;overflow-wrap:anywhere;}
 
-  .composer{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:18px;}
-  .composer textarea{width:100%;background:transparent;border:none;color:var(--chalk);font:inherit;font-size:.9rem;resize:vertical;min-height:64px;outline:none;}
+  /* sohbet */
+  .chat{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
+  .chat-scroll{height:min(56vh,460px);overflow-y:auto;display:flex;flex-direction:column;padding:14px;}
+  .chat-inner{margin-top:auto;}
+  .msg{display:flex;margin-bottom:9px;}
+  .msg.right{justify-content:flex-end;}
+  .bubble{position:relative;max-width:82%;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:8px 12px;min-width:0;}
+  .msg.right .bubble{background:rgba(90,169,255,.14);border-color:rgba(90,169,255,.32);border-bottom-right-radius:5px;}
+  .msg.left .bubble{border-bottom-left-radius:5px;}
+  .bubble .nm{font-size:.71rem;font-weight:600;color:var(--home);margin-bottom:2px;overflow-wrap:anywhere;}
+  .msg.right .bubble .nm{display:none;}
+  .bubble .tx{font-size:.88rem;white-space:pre-wrap;overflow-wrap:anywhere;}
+  .bubble .foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:3px;}
+  .bubble .tm{font-size:.63rem;color:var(--dim);}
+  .bubble .kill{background:none;border:none;color:var(--dim);font-size:.63rem;cursor:pointer;padding:0;text-decoration:underline;}
+  .bubble .kill:hover{color:var(--away);}
+  .day{text-align:center;font-size:.66rem;color:var(--dim);margin:12px 0 10px;}
+  .chat-empty{text-align:center;color:var(--dim);font-size:.84rem;padding:24px;}
+  .composer{border-top:1px solid var(--line);padding:10px 12px;background:var(--field);}
+  .composer-row{display:flex;gap:9px;align-items:flex-end;}
+  .composer textarea{flex:1;background:transparent;border:none;color:var(--chalk);font:inherit;font-size:.9rem;resize:none;max-height:120px;min-height:24px;outline:none;line-height:1.45;padding:6px 0;}
   .composer textarea::placeholder{color:var(--dim);}
-  .composer-foot{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:10px;margin-top:8px;}
-  .composer-foot .as{font-size:.72rem;color:var(--dim);}
-  .composer-foot .as b{color:var(--chalk);font-weight:600;}
-  .counter{margin-left:auto;font-size:.7rem;color:var(--dim);font-variant-numeric:tabular-nums;}
+  .composer-meta{display:flex;align-items:center;gap:10px;margin-top:4px;}
+  .composer-meta .as{font-size:.7rem;color:var(--dim);}
+  .composer-meta .as b{color:var(--chalk);font-weight:600;}
+  .counter{margin-left:auto;font-size:.68rem;color:var(--dim);font-variant-numeric:tabular-nums;}
   .counter.over{color:var(--away);}
+  .note{font-size:.72rem;color:var(--dim);min-height:15px;margin-top:7px;}
+  .note.bad{color:var(--away);}
+
   .btn{background:var(--home);border:1px solid var(--home);color:#04140C;font:inherit;font-size:.82rem;font-weight:600;padding:8px 16px;border-radius:8px;cursor:pointer;}
   .btn:hover{filter:brightness(1.08);}
   .btn:disabled{opacity:.45;cursor:not-allowed;}
-  .note{font-size:.72rem;color:var(--dim);min-height:15px;margin-top:6px;}
-  .note.bad{color:var(--away);}
-  .msg{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--line);}
-  .msg:last-child{border-bottom:none;}
-  .msg .dot{width:30px;height:30px;border-radius:50%;background:var(--panel-2);color:var(--dim);font-family:var(--cond);font-weight:700;font-size:.82rem;display:grid;place-items:center;flex-shrink:0;}
-  .msg.mine .dot{background:var(--home);color:#04140C;}
-  .msg .body{min-width:0;flex:1;}
-  .msg .head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
-  .msg .nm{font-size:.82rem;font-weight:600;overflow-wrap:anywhere;}
-  .msg .tm{font-size:.66rem;color:var(--dim);}
-  .msg .tx{font-size:.88rem;margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere;}
 
   .blank{text-align:center;padding:40px 20px;color:var(--dim);font-size:.86rem;border:1px dashed var(--line);border-radius:var(--r);}
   .blank b{color:var(--chalk);}
@@ -158,18 +173,19 @@
   .gate-card .btn{width:100%;margin-top:10px;padding:12px;font-size:.9rem;}
   .gate-note{font-size:.74rem;color:var(--away);min-height:17px;margin-top:8px;}
 
-  a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--home);outline-offset:2px;}
+  a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--home);outline-offset:2px;}
 
   @media(max-width:560px){
-    .shell{padding:0 12px 48px;}
+    .shell{padding:0 12px 40px;}
     .board{padding:20px 12px 14px;}
     .stat-head{gap:6px;}
     .verdict{flex-wrap:wrap;}
     .verdict .score{margin-left:0;}
+    .chat-scroll{height:min(60vh,420px);}
   }
   @media print{
     body{background:#fff;color:#111;}
-    body::before,.topbar,.tabs,.composer,footer,.gate{display:none!important;}
+    body::before,.topbar,.tabs,.chat,footer,.gate{display:none!important;}
     .panel[hidden]{display:block!important;}
     .board,.vid,.verdict{border-color:#ccc;background:#fff;}
   }
@@ -180,7 +196,7 @@
 <div class="gate" id="gate" hidden>
   <div class="gate-card">
     <div class="mark">Kapışma</div>
-    <p>Tabloya girmek için bir isim seç. Tartışmada bu isimle görüneceksin.</p>
+    <p>Adını yaz, tartışmada bu isimle görüneceksin.</p>
     <input type="text" id="gateName" maxlength="40" placeholder="Adın" autocomplete="nickname" spellcheck="false">
     <div class="gate-note" id="gateNote"></div>
     <button class="btn" type="button" id="gateGo">Tabloya gir</button>
@@ -197,8 +213,6 @@
       <div class="menu" id="whoMenu" role="menu" hidden>
         <button type="button" id="menuRename" role="menuitem">İsmi değiştir</button>
         <button type="button" id="menuPrint" role="menuitem">Yazdır veya PDF al</button>
-        <div class="sep"></div>
-        <button type="button" id="menuLeave" role="menuitem">Çıkış yap</button>
       </div>
     </div>
   </header>
@@ -209,7 +223,7 @@
 </div>
 
 <script>
-window.APP_BUILD = '2026.09.03.3';
+window.APP_BUILD = '2026.09.03.5';
 
 const firebaseConfig = {
   apiKey: "AIzaSyByRs32guz2QBcoDFcA_q0BvWo_VuX9bmg",
@@ -233,6 +247,9 @@ let viewerName = '';
 let viewerId = '';
 let activeTab = 'stats';
 let boardShown = false;
+let seasonFilter = 'all';
+let unread = false;
+let seenCount = 0;
 
 document.getElementById('buildLine').textContent = 'Sürüm ' + window.APP_BUILD;
 
@@ -251,22 +268,34 @@ function safeUrl(v) {
 function initials(name) {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
-  const first = parts[0].charAt(0);
-  const second = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
-  return (first + second).toLocaleUpperCase('tr');
+  const a = parts[0].charAt(0);
+  const b = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
+  return (a + b).toLocaleUpperCase('tr');
 }
 
 function num(v) { const n = parseFloat(v); return isFinite(n) ? n : 0; }
 function fmtNum(n) { return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100); }
 
-function fmtWhen(iso) {
+function fmtClock(iso) {
   const d = iso ? new Date(iso) : null;
   if (!d || isNaN(d.getTime())) return '';
-  const sameDay = d.toDateString() === new Date().toDateString();
-  return sameDay
-    ? d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-    : d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) + ' ' +
-      d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtDay(iso) {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return '';
+  const today = new Date();
+  const yesterday = new Date(today.getTime() - 86400000);
+  if (d.toDateString() === today.toDateString()) return 'Bugün';
+  if (d.toDateString() === yesterday.toDateString()) return 'Dün';
+  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function fmtStamp(iso) {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) + ' ' + fmtClock(iso);
 }
 
 /* ---------- kimlik ---------- */
@@ -281,8 +310,7 @@ const store = (function () {
   } catch (e) { usable = false; }
   return {
     get: function (k) { try { return usable ? window.localStorage.getItem(k) : (mem[k] || null); } catch (e) { return mem[k] || null; } },
-    set: function (k, v) { try { if (usable) window.localStorage.setItem(k, v); else mem[k] = v; } catch (e) { mem[k] = v; } },
-    del: function (k) { try { if (usable) window.localStorage.removeItem(k); else delete mem[k]; } catch (e) { delete mem[k]; } }
+    set: function (k, v) { try { if (usable) window.localStorage.setItem(k, v); else mem[k] = v; } catch (e) { mem[k] = v; } }
   };
 })();
 
@@ -339,15 +367,22 @@ document.addEventListener('click', function () { toggleMenu(false); });
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape') toggleMenu(false); });
 document.getElementById('menuRename').addEventListener('click', function () { toggleMenu(false); openGate(viewerName); });
 document.getElementById('menuPrint').addEventListener('click', function () { toggleMenu(false); window.print(); });
-document.getElementById('menuLeave').addEventListener('click', function () {
-  toggleMenu(false);
-  store.del('kt_name');
-  viewerName = '';
-  renderWho();
-  openGate('');
-});
 
 /* ---------- hesaplamalar ---------- */
+
+function seasonsOf(matches) {
+  const seen = [];
+  (matches || []).forEach(function (m) {
+    const s = m.season || 'Sezon yok';
+    if (seen.indexOf(s) < 0) seen.push(s);
+  });
+  return seen.sort(function (a, b) { return a.localeCompare(b, 'tr'); });
+}
+
+function shownMatches() {
+  if (seasonFilter === 'all') return latestMatches;
+  return latestMatches.filter(function (m) { return (m.season || 'Sezon yok') === seasonFilter; });
+}
 
 function computeH2H(matches) {
   let w1 = 0, w2 = 0, d = 0;
@@ -401,17 +436,28 @@ function ytId(url) {
 function avatar(player, cls) {
   const src = safeUrl(player.photo);
   const mono = '<span class="mono">' + esc(initials(player.name)) + '</span>';
-  const inner = src
-    ? '<img src="' + esc(src) + '" alt="' + esc(player.name) + '" loading="lazy" data-fallback="1">'
-    : mono;
+  const inner = src ? '<img src="' + esc(src) + '" alt="' + esc(player.name) + '" loading="lazy" data-fallback="1">' : mono;
   return '<div class="avatar ' + cls + '" data-mono="' + esc(initials(player.name)) + '">' + inner + '</div>';
 }
 
-function boardSection(p1, p2) {
-  const h = computeH2H(latestMatches);
+function boardSection(p1, p2, data) {
+  const h = computeH2H(shownMatches());
+  const scope = seasonFilter === 'all' ? '' : seasonFilter + ' sezonunda ';
   const note = h.total === 0
-    ? 'Kayıtlı maç yok, rekor ilk kayıtla başlıyor'
-    : h.total + ' maçlık geçmiş, ' + h.draws + ' beraberlik';
+    ? (seasonFilter === 'all' ? 'Kayıtlı maç yok, rekor ilk kayıtla başlıyor' : 'Bu sezonda kayıtlı maç yok')
+    : scope + h.total + ' maçlık geçmiş, ' + h.draws + ' beraberlik';
+
+  const all = seasonsOf(latestMatches);
+  let picker = '';
+  if (all.length > 1) {
+    const opts = ['<option value="all">Tüm sezonlar</option>'].concat(all.map(function (s) {
+      return '<option value="' + esc(s) + '"' + (s === seasonFilter ? ' selected' : '') + '>' + esc(s) + '</option>';
+    })).join('');
+    picker = '<div class="season-pick"><select id="seasonPick" aria-label="Sezon filtresi">' + opts + '</select></div>';
+  }
+
+  const stamp = data.updatedAt ? '<span class="stamp">Son güncelleme ' + esc(fmtStamp(data.updatedAt)) + '</span>' : '';
+
   return '<section class="board' + (boardShown ? '' : ' reveal') + '">' +
     '<div class="board-grid">' +
       '<div class="side">' + avatar(p1, 'home') +
@@ -419,7 +465,7 @@ function boardSection(p1, p2) {
       '<div class="tally"><span class="h">' + h.w1 + '</span><span class="d">-</span><span class="a">' + h.w2 + '</span></div>' +
       '<div class="side">' + avatar(p2, 'away') +
         '<div><div class="pname">' + esc(p2.name) + '</div><div class="pteam">' + esc(p2.team || 'takım yok') + '</div></div></div>' +
-    '</div><p class="board-note">' + esc(note) + '</p></section>';
+    '</div><p class="board-note">' + esc(note) + stamp + '</p>' + picker + '</section>';
 }
 
 function statsPanel(p1, p2, statsList) {
@@ -452,8 +498,10 @@ function statsPanel(p1, p2, statsList) {
 }
 
 function seasonPanel(p1, p2) {
-  const seasons = computeSeasons(latestMatches);
-  if (seasons.length === 0) return '<div class="blank">Sezon tablosu için önce maç kaydedilmeli</div>';
+  const seasons = computeSeasons(shownMatches());
+  if (seasons.length === 0) {
+    return '<div class="blank">' + (seasonFilter === 'all' ? 'Sezon tablosu için önce maç kaydedilmeli' : 'Bu sezonda kayıt yok') + '</div>';
+  }
   const rows = seasons.map(function (s) {
     return '<tr><td>' + esc(s.season) + '</td><td>' + s.matches + '</td>' +
       '<td class="num h">' + s.w1 + '</td><td class="num a">' + s.w2 + '</td>' +
@@ -483,16 +531,18 @@ function videoPanel(p1, p2, data) {
   return html || '<div class="blank">Henüz bağlantı eklenmemiş</div>';
 }
 
-function talkPanel() {
-  return '<div class="composer">' +
-      '<textarea id="msgText" maxlength="' + MAX_MESSAGE + '" placeholder="Kim daha iyi, neden?"></textarea>' +
-      '<div class="composer-foot">' +
-        '<span class="as">Yazan <b>' + esc(viewerName) + '</b></span>' +
-        '<span class="counter" id="msgCount">0/' + MAX_MESSAGE + '</span>' +
-        '<button class="btn" type="button" id="msgSend">Gönder</button>' +
+function chatPanel() {
+  return '<div class="chat">' +
+      '<div class="chat-scroll" id="chatScroll"><div class="chat-inner" id="msgList"></div></div>' +
+      '<div class="composer">' +
+        '<div class="composer-row">' +
+          '<textarea id="msgText" rows="1" maxlength="' + MAX_MESSAGE + '" placeholder="Mesaj yaz"></textarea>' +
+          '<button class="btn" type="button" id="msgSend">Gönder</button>' +
+        '</div>' +
+        '<div class="composer-meta"><span class="as">Yazan <b>' + esc(viewerName) + '</b></span>' +
+        '<span class="counter" id="msgCount">0/' + MAX_MESSAGE + '</span></div>' +
       '</div>' +
-      '<div class="note" id="msgNote"></div>' +
-    '</div><div id="msgList"></div>';
+    '</div><div class="note" id="msgNote"></div>';
 }
 
 function videoCount(data) {
@@ -516,26 +566,28 @@ function render() {
 
   const p1 = Object.assign({ name: 'Oyuncu 1', team: '', photo: '' }, data.player1 || {});
   const p2 = Object.assign({ name: 'Oyuncu 2', team: '', photo: '' }, data.player2 || {});
+  document.title = p1.name + ' - ' + p2.name + ' | Kapışma Tablosu';
 
   const tabs = [
     { id: 'stats', label: 'Karşılaştırma', count: data.stats.length },
-    { id: 'seasons', label: 'Sezonlar', count: computeSeasons(latestMatches).length },
+    { id: 'seasons', label: 'Sezonlar', count: computeSeasons(shownMatches()).length },
     { id: 'videos', label: 'Videolar', count: videoCount(data) },
     { id: 'talk', label: 'Tartışma', count: latestComments.length }
   ];
 
   const tabBar = '<nav class="tabs" role="tablist">' + tabs.map(function (t) {
+    const ping = (t.id === 'talk' && unread && activeTab !== 'talk') ? '<span class="ping"></span>' : '';
     return '<button class="tab" type="button" role="tab" data-tab="' + t.id + '" aria-selected="' + (t.id === activeTab) + '">' +
-      esc(t.label) + (t.count ? '<span class="count">' + t.count + '</span>' : '') + '</button>';
+      esc(t.label) + (t.count ? '<span class="count">' + t.count + '</span>' : '') + ping + '</button>';
   }).join('') + '</nav>';
 
   const panels =
     '<div class="panel" data-panel="stats"' + (activeTab === 'stats' ? '' : ' hidden') + '>' + statsPanel(p1, p2, data.stats) + '</div>' +
     '<div class="panel" data-panel="seasons"' + (activeTab === 'seasons' ? '' : ' hidden') + '>' + seasonPanel(p1, p2) + '</div>' +
     '<div class="panel" data-panel="videos"' + (activeTab === 'videos' ? '' : ' hidden') + '>' + videoPanel(p1, p2, data) + '</div>' +
-    '<div class="panel" data-panel="talk"' + (activeTab === 'talk' ? '' : ' hidden') + '>' + talkPanel() + '</div>';
+    '<div class="panel" data-panel="talk"' + (activeTab === 'talk' ? '' : ' hidden') + '>' + chatPanel() + '</div>';
 
-  content.innerHTML = boardSection(p1, p2) + tabBar + panels;
+  content.innerHTML = boardSection(p1, p2, data) + tabBar + panels;
   boardShown = true;
 
   content.querySelectorAll('.avatar img[data-fallback]').forEach(function (img) {
@@ -549,12 +601,24 @@ function render() {
     btn.addEventListener('click', function () { selectTab(btn.getAttribute('data-tab')); });
   });
 
+  const pick = document.getElementById('seasonPick');
+  if (pick) pick.addEventListener('change', function () { seasonFilter = pick.value; render(); });
+
   const text = document.getElementById('msgText');
   text.value = draft;
-  text.addEventListener('input', updateCounter);
+  text.addEventListener('input', function () { autoGrow(text); updateCounter(); });
+  text.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); postComment(); }
+  });
   document.getElementById('msgSend').addEventListener('click', postComment);
+  autoGrow(text);
   updateCounter();
-  renderComments();
+  renderComments(true);
+}
+
+function autoGrow(node) {
+  node.style.height = 'auto';
+  node.style.height = Math.min(node.scrollHeight, 120) + 'px';
 }
 
 function selectTab(id) {
@@ -565,6 +629,25 @@ function selectTab(id) {
   document.querySelectorAll('.panel').forEach(function (p) {
     p.hidden = p.getAttribute('data-panel') !== id;
   });
+  if (id === 'talk') {
+    unread = false;
+    seenCount = latestComments.length;
+    const ping = document.querySelector('.tab[data-tab="talk"] .ping');
+    if (ping) ping.remove();
+    scrollChat(true);
+    const text = document.getElementById('msgText');
+    if (text) autoGrow(text);
+  }
+}
+
+function scrollChat(force) {
+  const box = document.getElementById('chatScroll');
+  if (!box) return;
+  if (!force) {
+    const gap = box.scrollHeight - box.scrollTop - box.clientHeight;
+    if (gap > 120) return;
+  }
+  requestAnimationFrame(function () { box.scrollTop = box.scrollHeight; });
 }
 
 function updateCounter() {
@@ -576,21 +659,35 @@ function updateCounter() {
   counter.className = 'counter' + (n >= MAX_MESSAGE ? ' over' : '');
 }
 
-function renderComments() {
+function renderComments(forceScroll) {
   const list = document.getElementById('msgList');
   if (!list) return;
+
   if (latestComments.length === 0) {
-    list.innerHTML = '<div class="blank">İlk sözü sen söyle</div>';
+    list.innerHTML = '<div class="chat-empty">Henüz mesaj yok, ilk sözü sen söyle</div>';
     return;
   }
-  list.innerHTML = latestComments.map(function (c) {
+
+  let html = '';
+  let lastDay = '';
+  latestComments.forEach(function (c) {
+    const day = fmtDay(c.time);
+    if (day && day !== lastDay) { html += '<div class="day">' + esc(day) + '</div>'; lastDay = day; }
     const mine = viewerId && c.uid === viewerId;
-    return '<div class="msg' + (mine ? ' mine' : '') + '">' +
-      '<div class="dot">' + esc(initials(c.name || 'Anonim')) + '</div>' +
-      '<div class="body"><div class="head"><span class="nm">' + esc(c.name || 'Anonim') + '</span>' +
-      '<span class="tm">' + esc(fmtWhen(c.time)) + '</span></div>' +
-      '<div class="tx">' + esc(c.message || '') + '</div></div></div>';
-  }).join('');
+    html += '<div class="msg ' + (mine ? 'right' : 'left') + '"><div class="bubble">' +
+      '<div class="nm">' + esc(c.name || 'Anonim') + '</div>' +
+      '<div class="tx">' + esc(c.message || '') + '</div>' +
+      '<div class="foot"><span class="tm">' + esc(fmtClock(c.time)) + '</span>' +
+      (mine ? '<button class="kill" type="button" data-kill="' + esc(c.id) + '">sil</button>' : '') +
+      '</div></div></div>';
+  });
+  list.innerHTML = html;
+
+  list.querySelectorAll('.kill').forEach(function (btn) {
+    btn.addEventListener('click', function () { removeComment(btn.getAttribute('data-kill')); });
+  });
+
+  scrollChat(!!forceScroll);
 }
 
 function setNote(msg, bad) {
@@ -600,18 +697,27 @@ function setNote(msg, bad) {
   note.className = 'note' + (bad ? ' bad' : '');
 }
 
+async function removeComment(id) {
+  if (!db || !id) return;
+  if (!confirm('Bu mesaj silinsin mi?')) return;
+  try {
+    await db.collection('kapisma_comments').doc(id).delete();
+  } catch (err) {
+    setNote('Silinemedi: ' + err.message, true);
+  }
+}
+
 async function postComment() {
   const btn = document.getElementById('msgSend');
   const text = document.getElementById('msgText');
   if (!btn || !text) return;
-  if (!db) { setNote('Bağlantı yok, yorum gönderilemiyor', true); return; }
+  if (!db) { setNote('Bağlantı yok, mesaj gönderilemiyor', true); return; }
   if (cleanName(viewerName).length < MIN_NAME) { openGate(''); return; }
 
   const message = text.value.trim().slice(0, MAX_MESSAGE);
-  if (!message) { setNote('Önce bir şeyler yaz', true); text.focus(); return; }
+  if (!message) { text.focus(); return; }
 
   btn.disabled = true;
-  setNote('Gönderiliyor…');
   try {
     await db.collection('kapisma_comments').add({
       name: viewerName,
@@ -620,12 +726,36 @@ async function postComment() {
       time: new Date().toISOString()
     });
     text.value = '';
+    autoGrow(text);
     updateCounter();
     setNote('');
+    scrollChat(true);
   } catch (err) {
     setNote('Gönderilemedi: ' + err.message, true);
   }
   btn.disabled = false;
+  text.focus();
+}
+
+function updateTalkTab() {
+  const tab = document.querySelector('.tab[data-tab="talk"]');
+  if (!tab) return;
+  const count = tab.querySelector('.count');
+  if (count) count.textContent = latestComments.length;
+  else if (latestComments.length) {
+    const span = document.createElement('span');
+    span.className = 'count';
+    span.textContent = latestComments.length;
+    tab.appendChild(span);
+  }
+  const ping = tab.querySelector('.ping');
+  if (unread && activeTab !== 'talk' && !ping) {
+    const dot = document.createElement('span');
+    dot.className = 'ping';
+    tab.appendChild(dot);
+  } else if ((!unread || activeTab === 'talk') && ping) {
+    ping.remove();
+  }
 }
 
 /* ---------- başlangıç ---------- */
@@ -656,12 +786,26 @@ if (configOk) {
     function (err) { document.getElementById('content').innerHTML = '<div class="blank">Tablo yüklenemedi: ' + esc(err.message) + '</div>'; }
   );
   db.collection('kapisma_matches').orderBy('date', 'desc').limit(300).onSnapshot(
-    function (snap) { latestMatches = snap.docs.map(function (d) { return d.data(); }); render(); },
+    function (snap) {
+      latestMatches = snap.docs.map(function (d) { return d.data(); });
+      if (seasonFilter !== 'all' && seasonsOf(latestMatches).indexOf(seasonFilter) < 0) seasonFilter = 'all';
+      render();
+    },
     function (err) { console.error('Maç geçmişi yüklenemedi:', err); }
   );
-  db.collection('kapisma_comments').orderBy('time', 'desc').limit(150).onSnapshot(
-    function (snap) { latestComments = snap.docs.map(function (d) { return d.data(); }); render(); },
-    function (err) { console.error('Yorumlar yüklenemedi:', err); }
+  db.collection('kapisma_comments').orderBy('time', 'asc').limitToLast(200).onSnapshot(
+    function (snap) {
+      const before = latestComments.length;
+      latestComments = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+      const last = latestComments[latestComments.length - 1];
+      const fromOther = last && last.uid !== viewerId;
+      if (latestComments.length > before && fromOther && activeTab !== 'talk') unread = true;
+      if (activeTab === 'talk') seenCount = latestComments.length;
+
+      if (document.getElementById('msgList')) { renderComments(false); updateTalkTab(); }
+      else render();
+    },
+    function (err) { console.error('Mesajlar yüklenemedi:', err); }
   );
 } else {
   document.getElementById('subLine').textContent = 'bağlantı yok';

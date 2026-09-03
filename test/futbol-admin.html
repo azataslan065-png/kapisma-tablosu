@@ -57,11 +57,12 @@
   .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 
   label{display:block;font-size:.72rem;color:var(--dim);margin:12px 0 5px;}
-  input[type="text"],input[type="url"],input[type="number"],textarea{
+  input[type="text"],input[type="url"],input[type="number"],textarea,select{
     width:100%;background:var(--field);border:1px solid var(--line);border-radius:9px;
     color:var(--chalk);font:inherit;font-size:.88rem;padding:10px 11px;outline:none;
   }
-  input:focus,textarea:focus{border-color:var(--home);}
+  select{cursor:pointer;}
+  input:focus,textarea:focus,select:focus{border-color:var(--home);}
   input[type="checkbox"]{accent-color:var(--home);width:17px;height:17px;}
 
   .who-edit{display:flex;gap:14px;align-items:flex-start;}
@@ -94,6 +95,8 @@
   td.mid{text-align:center;}
   .icon-btn{background:none;border:none;color:var(--dim);font-size:1rem;cursor:pointer;padding:4px 7px;border-radius:6px;line-height:1;}
   .icon-btn:hover{color:var(--away);background:rgba(255,110,78,.1);}
+  .icon-btn:disabled{opacity:.3;cursor:not-allowed;}
+  .icon-btn:disabled:hover{color:var(--dim);background:none;}
   .row-add{display:flex;gap:8px;margin-top:14px;}
   .row-add input{flex:1;}
 
@@ -209,12 +212,22 @@
       <h2>İstatistikler</h2>
       <p class="hint">Skor kutusu işaretliyse satır maçın kazananını belirler. Oynanan maç, dakika gibi üstünlük anlatmayan satırlarda işareti kaldır.</p>
       <table>
-        <thead><tr><th style="width:36%">İstatistik</th><th>Oyuncu 1</th><th>Oyuncu 2</th><th style="width:48px;text-align:center">Skor</th><th style="width:38px"></th></tr></thead>
+        <thead><tr><th style="width:34%">İstatistik</th><th>Oyuncu 1</th><th>Oyuncu 2</th><th style="width:44px;text-align:center">Skor</th><th style="width:56px"></th><th style="width:34px"></th></tr></thead>
         <tbody id="statsBody"></tbody>
       </table>
       <div class="row-add">
         <input type="text" id="newStat" maxlength="40" placeholder="Yeni istatistik adı">
         <button class="btn ghost" type="button" id="addStat">Ekle</button>
+      </div>
+      <div class="row-add">
+        <select id="preset">
+          <option value="">Hazır satır seti seç</option>
+          <option value="forvet">Forvet</option>
+          <option value="ortasaha">Orta saha</option>
+          <option value="defans">Defans</option>
+          <option value="kaleci">Kaleci</option>
+        </select>
+        <button class="btn ghost" type="button" id="applyPreset">Uygula</button>
       </div>
       <div class="readout" id="liveScore" style="margin-top:14px;"></div>
     </div>
@@ -282,7 +295,7 @@
 </div>
 
 <script>
-window.APP_BUILD = '2026.09.03.3';
+window.APP_BUILD = '2026.09.03.5';
 
 const firebaseConfig = {
   apiKey: "AIzaSyByRs32guz2QBcoDFcA_q0BvWo_VuX9bmg",
@@ -514,6 +527,22 @@ el('addLink2').addEventListener('click', function () { links[2].push({ title: ''
 
 /* ---------- istatistikler ---------- */
 
+const PRESETS = {
+  forvet: [['Gol', true], ['Asist', true], ['Şut isabeti (%)', true], ['Penaltı golü', true], ['Oynanan maç', false]],
+  ortasaha: [['Asist', true], ['Kilit pas', true], ['Pas isabeti (%)', true], ['Top kapma', true], ['Oynanan maç', false]],
+  defans: [['Top kapma', true], ['İkili mücadele (%)', true], ['Blok', true], ['Yenilen gol', false], ['Oynanan maç', false]],
+  kaleci: [['Kurtarış', true], ['Kurtarış oranı (%)', true], ['Gol yemediği maç', true], ['Yenilen gol', false], ['Oynanan maç', false]]
+};
+
+function moveStat(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= stats.length) return;
+  const tmp = stats[i];
+  stats[i] = stats[j];
+  stats[j] = tmp;
+  renderStats();
+}
+
 function renderStats() {
   const body = el('statsBody');
   body.innerHTML = '';
@@ -548,6 +577,24 @@ function renderStats() {
     cb.addEventListener('change', function () { stats[i].score = cb.checked; renderScore(); });
     tdScore.appendChild(cb);
 
+    const tdMove = document.createElement('td');
+    tdMove.className = 'mid';
+    const up = document.createElement('button');
+    up.type = 'button';
+    up.className = 'icon-btn';
+    up.textContent = '↑';
+    up.disabled = i === 0;
+    up.setAttribute('aria-label', 'Yukarı taşı');
+    up.addEventListener('click', function () { moveStat(i, -1); });
+    const down = document.createElement('button');
+    down.type = 'button';
+    down.className = 'icon-btn';
+    down.textContent = '↓';
+    down.disabled = i === stats.length - 1;
+    down.setAttribute('aria-label', 'Aşağı taşı');
+    down.addEventListener('click', function () { moveStat(i, 1); });
+    tdMove.append(up, down);
+
     const tdDel = document.createElement('td');
     const del = document.createElement('button');
     del.type = 'button';
@@ -557,11 +604,29 @@ function renderStats() {
     del.addEventListener('click', function () { stats.splice(i, 1); renderStats(); });
     tdDel.appendChild(del);
 
-    tr.append(tdName, mk('v1'), mk('v2'), tdScore, tdDel);
+    tr.append(tdName, mk('v1'), mk('v2'), tdScore, tdMove, tdDel);
     body.appendChild(tr);
   });
   renderScore();
 }
+
+el('applyPreset').addEventListener('click', function () {
+  const key = el('preset').value;
+  const rows = PRESETS[key];
+  if (!rows) { setState('Önce bir set seç'); return; }
+  let replace = true;
+  if (stats.length > 0) {
+    replace = confirm('Mevcut satırların yerine geçsin mi? İptal dersen sona eklenir.');
+  }
+  const built = rows.map(function (r) { return { label: r[0], v1: 0, v2: 0, score: r[1] }; });
+  if (replace) stats = built;
+  else built.forEach(function (row) {
+    if (!stats.some(function (s) { return String(s.label).toLocaleLowerCase('tr') === row.label.toLocaleLowerCase('tr'); })) stats.push(row);
+  });
+  el('preset').value = '';
+  renderStats();
+  setState(replace ? 'Satırlar değiştirildi, kaydetmeyi unutma' : 'Satırlar eklendi, kaydetmeyi unutma');
+});
 
 el('addStat').addEventListener('click', function () {
   const input = el('newStat');
