@@ -1,7 +1,7 @@
 /* Kapışma Tablosu — Service Worker
    Sürüm değiştirilince eski önbellek silinir. Uygulamayı güncelledikten sonra
    CACHE_VERSION'ı artır, yoksa cihazlarda eski dosya kalabilir. */
-const CACHE_VERSION = 'kapisma-2026-09-07-E';
+const CACHE_VERSION = 'kapisma-2026-09-07-F';
 
 /* Yalnızca kabuk dosyaları. Firestore verisi ASLA önbelleğe alınmaz. */
 const SHELL = [
@@ -10,7 +10,8 @@ const SHELL = [
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  './admin-icon-192.png'
 ];
 
 self.addEventListener('install', event => {
