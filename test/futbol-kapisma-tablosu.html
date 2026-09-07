@@ -2,229 +2,502 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Kapışma Tablosu</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#10130a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kapışma">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
-    --pitch:#07180F;
-    --panel:#0D241A;
-    --panel-2:#122E22;
-    --field:#061710;
-    --line:rgba(233,244,236,.13);
-    --chalk:#E9F4EC;
-    --dim:#7E9689;
-    --home:#5AA9FF;
-    --away:#FF6E4E;
-    --gold:#E8C86A;
-    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
-    --cond:'Barlow Condensed','Inter',Arial Narrow,sans-serif;
-    --r:12px;
+    --p1:#2f7ef5; --p2:#f5473a;
+    --accent:#c8e35a; --accent-dark:#a9c93f;
+    --card:rgba(20,28,14,.78); --card-solid:#1b2412;
+    --border:rgba(255,255,255,.12);
+    --text:#f2f5ec; --muted:rgba(242,245,236,.62);
+    --header:#10130a; --field:#0d130a; --red:#f5473a;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:var(--sans);background:var(--pitch);color:var(--chalk);min-height:100vh;line-height:1.55;-webkit-font-smoothing:antialiased;}
-  body::before{
-    content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+
+  /* ============================================================
+     SABİT ARKA PLAN — kök sayfa hiç kaydırılmaz, scroll .app içinde
+     ============================================================ */
+  html,body{height:100%;overflow:hidden;}
+  body{
+    position:fixed;inset:0;width:100%;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    color:var(--text);background:#2c5c14;
+    overscroll-behavior:none;-webkit-tap-highlight-color:transparent;
+  }
+  .bg-layer{
+    position:absolute;inset:0;z-index:0;pointer-events:none;
     background:
-      radial-gradient(circle at 50% 0%,rgba(90,169,255,.07),transparent 55%),
-      repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0 46px,transparent 46px 92px);
+      repeating-linear-gradient(120deg, rgba(255,255,255,.045) 0 40px, rgba(255,255,255,0) 40px 80px),
+      linear-gradient(160deg,#6fae2e,#3f7a1f 55%,#2c5c14);
+    background-repeat:no-repeat;background-size:100% 100%;
   }
-  .shell{position:relative;z-index:1;max-width:820px;margin:0 auto;padding:0 16px 56px;}
-
-  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;margin-bottom:20px;background:linear-gradient(var(--pitch) 72%,transparent);}
-  .mark{font-family:var(--cond);font-size:1.35rem;font-weight:700;letter-spacing:.4px;line-height:1;}
-  .mark small{display:block;font-family:var(--sans);font-size:.62rem;font-weight:400;color:var(--dim);letter-spacing:.3px;}
-  .who{position:relative;}
-  .who-btn{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);color:var(--chalk);border-radius:99px;padding:5px 12px 5px 6px;font:inherit;font-size:.8rem;cursor:pointer;}
-  .who-btn:hover{background:var(--panel-2);}
-  .who-dot{width:24px;height:24px;border-radius:50%;background:var(--home);color:#04140C;font-family:var(--cond);font-weight:700;font-size:.85rem;display:grid;place-items:center;flex-shrink:0;}
-  .menu{position:absolute;right:0;top:calc(100% + 6px);min-width:190px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:6px;box-shadow:0 18px 40px rgba(0,0,0,.5);}
-  .menu[hidden]{display:none;}
-  .menu button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--chalk);font:inherit;font-size:.82rem;padding:9px 10px;border-radius:8px;cursor:pointer;}
-  .menu button:hover{background:var(--panel-2);}
-  .menu .sep{height:1px;background:var(--line);margin:5px 4px;}
-
-  .board{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 18px 18px;overflow:hidden;}
-  .board::before{content:'';position:absolute;left:50%;top:-40%;width:230px;height:230px;margin-left:-115px;border:1px solid var(--line);border-radius:50%;}
-  .board::after{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line);}
-  .board-grid{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;}
-  .side{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0;}
-  .avatar{width:clamp(78px,23vw,108px);aspect-ratio:1;border-radius:50%;background:var(--panel-2);border:2px solid var(--line);overflow:hidden;display:grid;place-items:center;flex-shrink:0;}
-  .avatar.home{border-color:var(--home);}
-  .avatar.away{border-color:var(--away);}
-  .avatar img{width:100%;height:100%;object-fit:cover;object-position:center 28%;display:block;}
-  .avatar .mono{font-family:var(--cond);font-weight:700;font-size:1.9rem;color:var(--dim);letter-spacing:1px;}
-  .pname{font-family:var(--cond);font-size:1.22rem;font-weight:600;line-height:1.1;text-align:center;overflow-wrap:anywhere;}
-  .pteam{font-size:.7rem;color:var(--dim);text-align:center;overflow-wrap:anywhere;}
-  .tally{display:flex;align-items:baseline;gap:10px;font-family:var(--cond);font-weight:700;font-size:clamp(2.4rem,12vw,3.6rem);line-height:1;}
-  .tally .h{color:var(--home);}
-  .tally .a{color:var(--away);}
-  .tally .d{color:var(--dim);font-size:.4em;font-weight:500;}
-  .board-note{position:relative;text-align:center;font-size:.72rem;color:var(--dim);margin-top:16px;}
-  .board-note .stamp{display:block;color:#5C6F64;font-size:.66rem;margin-top:3px;}
-  .season-pick{position:relative;display:flex;justify-content:center;margin-top:12px;}
-  .reveal{animation:rise .45s ease-out both;}
-  @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
-  @media(prefers-reduced-motion:reduce){.reveal{animation:none;}}
-
-  select{background:var(--field);border:1px solid var(--line);border-radius:8px;color:var(--chalk);font:inherit;font-size:.78rem;padding:7px 10px;outline:none;cursor:pointer;}
-  select:focus{border-color:var(--home);}
-
-  .tabs{display:flex;gap:4px;margin:22px 0 16px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
-  .tabs::-webkit-scrollbar{display:none;}
-  .tab{position:relative;background:none;border:none;border-bottom:2px solid transparent;color:var(--dim);font:inherit;font-size:.86rem;font-weight:500;padding:8px 12px;cursor:pointer;white-space:nowrap;}
-  .tab:hover{color:var(--chalk);}
-  .tab[aria-selected="true"]{color:var(--chalk);border-bottom-color:var(--home);}
-  .tab .count{font-size:.7rem;color:var(--dim);margin-left:5px;}
-  .tab .ping{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--away);margin-left:6px;vertical-align:middle;}
-  .panel[hidden]{display:none;}
-
-  .stat{padding:12px 0;border-bottom:1px solid var(--line);}
-  .stat:last-child{border-bottom:none;}
-  .stat-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:7px;}
-  .val{font-family:var(--cond);font-size:1.5rem;font-weight:700;line-height:1;color:var(--dim);}
-  .val.l{text-align:left;}
-  .val.r{text-align:right;}
-  .val.won.l{color:var(--home);}
-  .val.won.r{color:var(--away);}
-  .stat-name{font-size:.76rem;color:var(--dim);text-align:center;overflow-wrap:anywhere;}
-  .stat-name em{display:block;font-style:normal;font-size:.62rem;color:#5C6F64;}
-  .track{display:grid;grid-template-columns:1fr 1fr;gap:3px;}
-  .half{height:7px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;display:flex;}
-  .half.l{justify-content:flex-end;}
-  .fill{height:100%;border-radius:4px;}
-  .fill.l{background:var(--home);}
-  .fill.r{background:var(--away);}
-  .stat.off .fill{background:#3B5147;}
-
-  .verdict{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:var(--r);padding:14px 16px;margin-top:18px;font-size:.86rem;color:var(--dim);}
-  .verdict b{color:var(--chalk);font-weight:600;}
-  .verdict .score{font-family:var(--cond);font-size:1.5rem;font-weight:700;color:var(--chalk);margin-left:auto;white-space:nowrap;}
-
-  .grid-table{width:100%;border-collapse:collapse;font-size:.85rem;}
-  .grid-table th{text-align:left;font-weight:500;font-size:.72rem;color:var(--dim);padding:9px 8px;border-bottom:1px solid var(--line);}
-  .grid-table td{padding:11px 8px;border-bottom:1px solid var(--line);}
-  .grid-table tr:last-child td{border-bottom:none;}
-  .grid-table td.num{font-family:var(--cond);font-size:1.05rem;font-weight:600;}
-  .num.h{color:var(--home);}
-  .num.a{color:var(--away);}
-
-  .vid-group{margin-bottom:20px;}
-  .vid-group h4{font-family:var(--cond);font-size:1.05rem;font-weight:600;margin-bottom:8px;}
-  .vid-group.home h4{color:var(--home);}
-  .vid-group.away h4{color:var(--away);}
-  .vid{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px;margin-bottom:8px;color:var(--chalk);text-decoration:none;}
-  .vid:hover{background:var(--panel-2);}
-  .vid img{width:76px;height:44px;object-fit:cover;border-radius:7px;flex-shrink:0;background:var(--panel-2);}
-  .vid .ph{width:76px;height:44px;border-radius:7px;background:var(--panel-2);display:grid;place-items:center;color:var(--dim);font-size:.7rem;flex-shrink:0;}
-  .vid span{font-size:.84rem;overflow-wrap:anywhere;}
-
-  /* sohbet */
-  .chat{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
-  .chat-scroll{height:min(56vh,460px);overflow-y:auto;display:flex;flex-direction:column;padding:14px;}
-  .chat-inner{margin-top:auto;}
-  .msg{display:flex;margin-bottom:9px;}
-  .msg.right{justify-content:flex-end;}
-  .bubble{position:relative;max-width:82%;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:8px 12px;min-width:0;}
-  .msg.right .bubble{background:rgba(90,169,255,.14);border-color:rgba(90,169,255,.32);border-bottom-right-radius:5px;}
-  .msg.left .bubble{border-bottom-left-radius:5px;}
-  .bubble .nm{font-size:.71rem;font-weight:600;color:var(--home);margin-bottom:2px;overflow-wrap:anywhere;}
-  .msg.right .bubble .nm{display:none;}
-  .bubble .tx{font-size:.88rem;white-space:pre-wrap;overflow-wrap:anywhere;}
-  .bubble .foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:3px;}
-  .bubble .tm{font-size:.63rem;color:var(--dim);}
-  .bubble .kill{background:none;border:none;color:var(--dim);font-size:.63rem;cursor:pointer;padding:0;text-decoration:underline;}
-  .bubble .kill:hover{color:var(--away);}
-  .day{text-align:center;font-size:.66rem;color:var(--dim);margin:12px 0 10px;}
-  .chat-empty{text-align:center;color:var(--dim);font-size:.84rem;padding:24px;}
-  .composer{border-top:1px solid var(--line);padding:10px 12px;background:var(--field);}
-  .composer-row{display:flex;gap:9px;align-items:flex-end;}
-  .composer textarea{flex:1;background:transparent;border:none;color:var(--chalk);font:inherit;font-size:.9rem;resize:none;max-height:120px;min-height:24px;outline:none;line-height:1.45;padding:6px 0;}
-  .composer textarea::placeholder{color:var(--dim);}
-  .composer-meta{display:flex;align-items:center;gap:10px;margin-top:4px;}
-  .composer-meta .as{font-size:.7rem;color:var(--dim);}
-  .composer-meta .as b{color:var(--chalk);font-weight:600;}
-  .counter{margin-left:auto;font-size:.68rem;color:var(--dim);font-variant-numeric:tabular-nums;}
-  .counter.over{color:var(--away);}
-  .note{font-size:.72rem;color:var(--dim);min-height:15px;margin-top:7px;}
-  .note.bad{color:var(--away);}
-
-  .btn{background:var(--home);border:1px solid var(--home);color:#04140C;font:inherit;font-size:.82rem;font-weight:600;padding:8px 16px;border-radius:8px;cursor:pointer;}
-  .btn:hover{filter:brightness(1.08);}
-  .btn:disabled{opacity:.45;cursor:not-allowed;}
-
-  .blank{text-align:center;padding:40px 20px;color:var(--dim);font-size:.86rem;border:1px dashed var(--line);border-radius:var(--r);}
-  .blank b{color:var(--chalk);}
-  footer{text-align:center;color:#4E6157;font-size:.68rem;margin-top:34px;}
-
-  .gate{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:20px;background:var(--pitch);}
-  .gate[hidden]{display:none;}
-  .gate::before{content:'';position:absolute;left:50%;top:50%;width:min(78vw,460px);aspect-ratio:1;transform:translate(-50%,-50%);border:1px solid var(--line);border-radius:50%;}
-  .gate::after{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line);}
-  .gate-card{position:relative;width:100%;max-width:340px;text-align:center;}
-  .gate-card .mark{font-size:1.9rem;margin-bottom:6px;}
-  .gate-card p{font-size:.82rem;color:var(--dim);margin-bottom:20px;}
-  .gate-card input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--chalk);font:inherit;font-size:1rem;padding:13px 14px;text-align:center;outline:none;}
-  .gate-card input:focus{border-color:var(--home);}
-  .gate-card .btn{width:100%;margin-top:10px;padding:12px;font-size:.9rem;}
-  .gate-note{font-size:.74rem;color:var(--away);min-height:17px;margin-top:8px;}
-
-  a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--home);outline-offset:2px;}
-
-  @media(max-width:560px){
-    .shell{padding:0 12px 40px;}
-    .board{padding:20px 12px 14px;}
-    .stat-head{gap:6px;}
-    .verdict{flex-wrap:wrap;}
-    .verdict .score{margin-left:0;}
-    .chat-scroll{height:min(60vh,420px);}
+  .app{
+    position:absolute;inset:0;z-index:1;
+    overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
-  @media print{
-    body{background:#fff;color:#111;}
-    body::before,.topbar,.tabs,.chat,footer,.gate{display:none!important;}
-    .panel[hidden]{display:block!important;}
-    .board,.vid,.verdict{border-color:#ccc;background:#fff;}
+
+  .header{background:var(--header);padding:12px 14px;display:flex;align-items:center;gap:11px;box-shadow:0 2px 10px rgba(0,0,0,.35);position:sticky;top:0;z-index:30;}
+  .header .app-icon{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+  .header .titles{flex:1;min-width:0;}
+  .header h1{font-size:1rem;font-weight:800;line-height:1.15;}
+  .header .season-tag{font-size:.68rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .who-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text);border-radius:999px;padding:7px 12px;font-size:.72rem;font-weight:700;cursor:pointer;flex-shrink:0;max-width:130px;font-family:inherit;}
+  .who-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .wrap{max-width:900px;margin:0 auto;padding:16px 12px 110px;}
+
+  .pill-tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px;-webkit-overflow-scrolling:touch;}
+  .pill-tabs::-webkit-scrollbar{display:none;}
+  .pill-tab{flex-shrink:0;background:rgba(0,0,0,.35);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:999px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  .pill-tab.active{background:var(--accent);color:#132000;border-color:var(--accent);}
+
+  .season-filter{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;-webkit-overflow-scrolling:touch;align-items:center;}
+  .season-filter::-webkit-scrollbar{display:none;}
+  .sf-label{font-size:.64rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:800;flex-shrink:0;padding-right:2px;}
+  .sf-chip{flex-shrink:0;background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:999px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .sf-chip.active{background:rgba(200,227,90,.18);border-color:var(--accent);color:var(--accent);}
+  .agg-note{font-size:.68rem;color:var(--muted);margin:-2px 0 10px;line-height:1.45;}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;backdrop-filter:blur(2px);}
+  .card h3{font-size:.83rem;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;margin-bottom:11px;}
+
+  .badge{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.3rem;color:#fff;flex-shrink:0;background-size:cover;background-position:center;border:3px solid transparent;}
+  .badge.p1{border-color:var(--p1);background-color:#173a6b;}
+  .badge.p2{border-color:var(--p2);background-color:#5c1a15;}
+
+  .h2h-score{display:flex;justify-content:space-around;align-items:center;}
+  .h2h-item{text-align:center;flex:1;min-width:0;}
+  .h2h-number{font-size:2.1rem;font-weight:900;color:var(--accent);}
+  .h2h-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;}
+  .h2h-vs{color:var(--muted);font-weight:900;font-size:1rem;}
+  .h2h-sub{text-align:center;font-size:.72rem;color:var(--muted);margin-top:8px;}
+
+  .players-row{display:flex;gap:14px;align-items:center;}
+  .players-row .vcol{flex:1;display:flex;align-items:center;gap:10px;min-width:0;}
+  .players-row .vcol.right{flex-direction:row-reverse;text-align:right;}
+  .pname{font-weight:800;font-size:.95rem;}
+  .pteam{font-size:.72rem;color:var(--muted);}
+  .players-vs{font-weight:900;color:var(--muted);font-size:1.1rem;flex-shrink:0;}
+
+  .summary-card{display:flex;align-items:center;gap:14px;background:rgba(0,0,0,.32);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+  .summary-card .icon{font-size:1.6rem;width:40px;text-align:center;flex-shrink:0;}
+  .summary-card .body{flex:1;min-width:0;}
+  .summary-card .label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  .summary-card .value{font-weight:800;font-size:.92rem;margin-top:2px;}
+  .summary-card .value b{color:var(--accent);}
+
+  .stat-focus{text-align:center;padding:10px 0;}
+  .stat-focus .stat-title{font-size:.78rem;color:var(--muted);text-transform:uppercase;padding:0 6px;}
+  .stat-focus .stat-values{display:flex;justify-content:space-around;align-items:center;gap:8px;}
+  .stat-focus .sv{font-size:2rem;font-weight:900;font-variant-numeric:tabular-nums;}
+  .stat-focus .sv.lead{color:var(--accent);}
+  .bar-track{height:8px;background:rgba(255,255,255,.1);border-radius:4px;margin-top:14px;overflow:hidden;display:flex;}
+  .bar-fill-l{background:var(--p1);height:100%;}
+  .bar-fill-r{background:var(--p2);height:100%;margin-left:auto;}
+
+  .score-summary{text-align:center;font-size:.86rem;color:var(--muted);line-height:1.5;}
+  .score-summary b{color:var(--text);}
+
+  .season-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+  .season-table th{text-align:left;padding:8px 6px;color:var(--muted);border-bottom:1px solid var(--border);font-size:.7rem;text-transform:uppercase;}
+  .season-table td{padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.06);}
+  .season-table tr.now td{color:var(--accent);font-weight:800;}
+
+  .video-links{display:flex;gap:10px;flex-wrap:wrap;}
+  .video-btn{flex:1;min-width:140px;background:rgba(0,0,0,.35);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:.82rem;text-decoration:none;text-align:center;font-weight:700;}
+  .video-btn.p1{border-color:var(--p1);}
+  .video-btn.p2{border-color:var(--p2);}
+
+  .empty-state{text-align:center;padding:40px 20px;color:var(--muted);line-height:1.6;}
+
+  /* FAB + SOHBET */
+  .fab{position:fixed;right:18px;bottom:calc(22px + env(safe-area-inset-bottom));background:var(--accent);color:#132000;border:none;width:58px;height:58px;border-radius:50%;font-size:1.4rem;box-shadow:0 6px 18px rgba(0,0,0,.4);cursor:pointer;z-index:40;display:flex;align-items:center;justify-content:center;}
+  .fab .badge-count{position:absolute;top:-3px;right:-3px;background:var(--p2);color:#fff;font-size:.62rem;font-weight:800;min-width:20px;height:20px;border-radius:10px;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--header);}
+  .fab .badge-count.on{display:flex;}
+
+  .sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:none;}
+  .sheet-backdrop.open{display:block;}
+  .sheet{position:fixed;left:0;right:0;bottom:0;max-width:900px;margin:0 auto;background:#232d16;border-radius:20px 20px 0 0;z-index:51;transform:translateY(100%);transition:transform .25s ease;max-height:88%;display:flex;flex-direction:column;}
+  .sheet.open{transform:translateY(0);}
+  .sheet-handle{width:40px;height:4px;background:rgba(255,255,255,.25);border-radius:2px;margin:10px auto 4px;flex-shrink:0;}
+  .sheet-header{display:flex;align-items:center;justify-content:space-between;padding:8px 18px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .sheet-header h2{font-size:1.02rem;display:flex;align-items:center;gap:8px;}
+  .sheet-close{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.08);border:none;color:var(--text);font-size:1rem;cursor:pointer;font-family:inherit;}
+
+  .msg-list{flex:1;overflow-y:auto;padding:12px 16px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+  .msg-item{background:rgba(0,0,0,.28);border-radius:12px;padding:10px 12px;margin-bottom:9px;border-left:3px solid transparent;}
+  .msg-item.mine{border-left-color:var(--accent);background:rgba(200,227,90,.09);}
+  .msg-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+  .msg-item .mname{font-weight:800;font-size:.8rem;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .msg-item .mtime{font-size:.62rem;color:var(--muted);flex-shrink:0;}
+  .msg-item .mtext{font-size:.87rem;margin-top:4px;word-break:break-word;white-space:pre-wrap;}
+  .msg-quote{border-left:2px solid var(--border);padding:4px 0 4px 8px;margin-top:5px;font-size:.74rem;color:var(--muted);}
+  .msg-quote b{color:var(--text);display:block;font-size:.72rem;}
+  .msg-quote span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* MESAJ FOTOĞRAFI */
+  .msg-img-wrap{margin-top:8px;border-radius:11px;overflow:hidden;background:rgba(0,0,0,.4);border:1px solid var(--border);position:relative;min-height:70px;display:flex;align-items:center;justify-content:center;cursor:zoom-in;}
+  .msg-img-wrap img{width:100%;display:block;max-height:280px;object-fit:cover;}
+  .msg-img-wrap .img-loading{font-size:.72rem;color:var(--muted);padding:24px 10px;}
+
+  .unread-line{display:flex;align-items:center;gap:10px;margin:6px 0 12px;}
+  .unread-line::before,.unread-line::after{content:'';flex:1;height:1px;background:rgba(245,71,58,.45);}
+  .unread-line span{font-size:.66rem;font-weight:800;color:#ff9d94;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap;}
+
+  .msg-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .msg-actions button{background:rgba(255,255,255,.07);border:1px solid var(--border);color:var(--muted);font-size:.7rem;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;font-family:inherit;}
+  .msg-actions button:hover{background:rgba(255,255,255,.14);color:var(--text);}
+  .msg-actions button.danger{color:#ffb4ae;border-color:rgba(245,71,58,.4);}
+  .msg-empty{text-align:center;color:var(--muted);font-size:.82rem;padding:26px 20px;line-height:1.6;}
+
+  .compose-ctx{display:none;align-items:center;gap:10px;margin:0 14px 8px;padding:9px 12px;background:rgba(200,227,90,.1);border:1px solid rgba(200,227,90,.3);border-left:3px solid var(--accent);border-radius:10px;flex-shrink:0;}
+  .compose-ctx.open{display:flex;}
+  .ctx-thumb{width:42px;height:42px;border-radius:8px;object-fit:cover;flex-shrink:0;display:none;border:1px solid var(--border);}
+  .ctx-thumb.on{display:block;}
+  .ctx-body{flex:1;min-width:0;}
+  .ctx-tag{font-size:.68rem;color:var(--accent);font-weight:800;display:block;}
+  .ctx-text{font-size:.75rem;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ctx-x{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.08);border:none;color:var(--text);cursor:pointer;flex-shrink:0;font-size:.8rem;font-family:inherit;}
+  .ctx-del{display:none;height:28px;padding:0 10px;border-radius:8px;background:rgba(245,71,58,.16);border:1px solid rgba(245,71,58,.45);color:#ffb4ae;cursor:pointer;flex-shrink:0;font-size:.7rem;font-weight:800;font-family:inherit;}
+  .ctx-del.on{display:block;}
+
+  .sheet-input-row{display:flex;align-items:center;gap:8px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--border);flex-shrink:0;}
+  .attach-btn{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text);font-size:1.05rem;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-family:inherit;}
+  .attach-btn:active{background:var(--accent);color:#132000;}
+  .attach-btn.busy{opacity:.5;}
+  .sheet-input-row input[type="text"]{flex:1;min-width:0;background:#161f0e;border:1px solid var(--border);border-radius:999px;color:var(--text);padding:11px 16px;font-size:.87rem;outline:none;font-family:inherit;}
+  .sheet-input-row input[type="text"]:focus{border-color:var(--accent);}
+  .send-btn{width:42px;height:42px;border-radius:50%;background:var(--accent);border:none;color:#132000;font-size:1.05rem;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-family:inherit;}
+
+  /* LIGHTBOX */
+  .lightbox{position:fixed;inset:0;z-index:450;background:rgba(3,6,1,.95);display:none;align-items:center;justify-content:center;padding:16px;}
+  .lightbox.open{display:flex;}
+  .lightbox img{max-width:100%;max-height:100%;border-radius:12px;}
+  .lb-close{position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.14);border:none;color:#fff;font-size:1.05rem;cursor:pointer;font-family:inherit;}
+
+  footer{text-align:center;color:var(--muted);font-size:.66rem;margin-top:18px;line-height:1.6;}
+
+  /* ============ POP-UP SİSTEMİ ============ */
+  .ui-backdrop{position:fixed;inset:0;z-index:300;background:rgba(4,8,2,.74);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:22px;}
+  .ui-backdrop.open{display:flex;animation:uiFade .16s ease;}
+  @keyframes uiFade{from{opacity:0}to{opacity:1}}
+  .ui-modal{width:100%;max-width:352px;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,#26331a,#171f0d);border:1px solid rgba(255,255,255,.14);box-shadow:0 26px 64px rgba(0,0,0,.6);animation:uiPop .2s cubic-bezier(.2,.9,.3,1.2);}
+  @keyframes uiPop{from{transform:translateY(18px) scale(.95);opacity:0}to{transform:none;opacity:1}}
+  .ui-stripe{height:4px;background:linear-gradient(90deg,var(--accent),var(--accent-dark));}
+  .ui-stripe.danger{background:linear-gradient(90deg,#f5473a,#a32a20);}
+  .ui-head{padding:22px 22px 0;text-align:center;}
+  .ui-icon{width:56px;height:56px;border-radius:16px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:1.7rem;background:rgba(200,227,90,.14);border:1px solid rgba(200,227,90,.3);}
+  .ui-icon.danger{background:rgba(245,71,58,.15);border-color:rgba(245,71,58,.4);}
+  .ui-title{font-size:1.04rem;font-weight:800;line-height:1.3;}
+  .ui-msg{font-size:.83rem;color:var(--muted);margin-top:8px;line-height:1.55;}
+  .ui-body{padding:16px 22px 0;}
+  .ui-input{width:100%;background:var(--field);border:1px solid var(--border);border-radius:12px;color:var(--text);padding:13px 14px;font-size:.95rem;outline:none;font-family:inherit;text-align:center;font-weight:700;}
+  .ui-input:focus{border-color:var(--accent);}
+  .ui-err{color:#ffb4ae;font-size:.74rem;min-height:17px;margin-top:7px;text-align:center;}
+  .ui-actions{display:flex;gap:9px;padding:18px;}
+  .ui-btn{flex:1;padding:13px 10px;border-radius:12px;font-size:.88rem;font-weight:800;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:rgba(255,255,255,.07);color:var(--text);}
+  .ui-btn:active{transform:scale(.97);}
+  .ui-btn.primary{background:var(--accent);border-color:var(--accent);color:#132000;}
+  .ui-btn.danger{background:var(--red);border-color:var(--red);color:#fff;}
+
+  /* TOAST */
+  .toast-wrap{position:fixed;left:0;right:0;bottom:calc(96px + env(safe-area-inset-bottom));z-index:400;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;padding:0 16px;}
+  .toast{background:#0f140a;border:1px solid var(--border);border-left:3px solid var(--accent);color:var(--text);padding:11px 16px;border-radius:12px;font-size:.81rem;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:100%;animation:toastIn .22s cubic-bezier(.2,.9,.3,1.2);}
+  .toast.err{border-left-color:var(--red);color:#ffb4ae;}
+  .toast.out{animation:toastOut .2s ease forwards;}
+  @keyframes toastIn{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+  @keyframes toastOut{to{transform:translateY(10px);opacity:0}}
+
+  /* İSİM GATE — her girişte açılır, kapatılamaz */
+  .gate-overlay{position:fixed;inset:0;background:rgba(4,8,2,.96);z-index:500;display:flex;align-items:center;justify-content:center;padding:22px;}
+  .gate-overlay.done{display:none;}
+  .gate-box{width:100%;max-width:352px;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,#26331a,#171f0d);border:1px solid rgba(255,255,255,.14);box-shadow:0 26px 64px rgba(0,0,0,.6);}
+
+  @media(max-width:600px){
+    .players-row{flex-direction:column;gap:10px;align-items:stretch;}
+    .players-row .vcol.right{flex-direction:row;text-align:left;}
+    .players-vs{display:none;}
   }
 </style>
 </head>
 <body>
+<div class="bg-layer"></div>
 
-<div class="gate" id="gate" hidden>
-  <div class="gate-card">
-    <div class="mark">Kapışma</div>
-    <p>Adını yaz, tartışmada bu isimle görüneceksin.</p>
-    <input type="text" id="gateName" maxlength="40" placeholder="Adın" autocomplete="nickname" spellcheck="false">
-    <div class="gate-note" id="gateNote"></div>
-    <button class="btn" type="button" id="gateGo">Tabloya gir</button>
+<div class="app" id="app">
+  <div class="header">
+    <div class="app-icon">⚽</div>
+    <div class="titles">
+      <h1>Kapışma Tablosu</h1>
+      <div class="season-tag" id="headerSeason">Yükleniyor…</div>
+    </div>
+    <button class="who-btn" onclick="changeName()">👤 <span id="whoLabel">—</span></button>
+  </div>
+
+  <div class="wrap">
+    <div id="content"><div class="card empty-state">Yükleniyor…</div></div>
+    <footer>
+      Veriler Firestore'dan gerçek zamanlı dinlenir.<br>
+      Sürüm 2026-09-07-E
+    </footer>
   </div>
 </div>
 
-<div class="shell">
-  <header class="topbar">
-    <div class="mark">Kapışma<small id="subLine">tablo yükleniyor</small></div>
-    <div class="who" id="who" hidden>
-      <button class="who-btn" type="button" id="whoBtn" aria-haspopup="menu" aria-expanded="false">
-        <span class="who-dot" id="whoDot"></span><span id="whoName"></span>
-      </button>
-      <div class="menu" id="whoMenu" role="menu" hidden>
-        <button type="button" id="menuRename" role="menuitem">İsmi değiştir</button>
-        <button type="button" id="menuPrint" role="menuitem">Yazdır veya PDF al</button>
-      </div>
+<button class="fab" id="fabBtn" onclick="openSheet()">💬<span class="badge-count" id="fabCount">0</span></button>
+
+<div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <h2>💬 Sohbet</h2>
+    <button class="sheet-close" onclick="closeSheet()">✕</button>
+  </div>
+  <div class="msg-list" id="msgList"><div class="msg-empty">Yükleniyor…</div></div>
+  <div class="compose-ctx" id="composeCtx">
+    <img class="ctx-thumb" id="ctxThumb" alt="">
+    <div class="ctx-body">
+      <span class="ctx-tag" id="ctxTag"></span>
+      <span class="ctx-text" id="ctxText"></span>
     </div>
-  </header>
+    <button class="ctx-del" id="ctxDelImg" onclick="removePendingPhoto()">🗑 Fotoğrafı kaldır</button>
+    <button class="ctx-x" onclick="cancelCompose()">✕</button>
+  </div>
+  <div class="sheet-input-row">
+    <input type="file" id="fileInput" accept="image/*" style="display:none;">
+    <button class="attach-btn" id="attachBtn" onclick="document.getElementById('fileInput').click()">📎</button>
+    <input type="text" id="msgInput" placeholder="Mesaj yaz..." maxlength="500" onkeydown="if(event.key==='Enter')sendMessage()">
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+  </div>
+</div>
 
-  <main id="content"><div class="blank">Tablo yükleniyor…</div></main>
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" alt="">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+</div>
 
-  <footer id="buildLine"></footer>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- İSİM GATE — her açılışta gösterilir -->
+<div class="gate-overlay" id="gateOverlay">
+  <div class="gate-box">
+    <div class="ui-stripe"></div>
+    <div class="ui-head">
+      <div class="ui-icon">⚽</div>
+      <div class="ui-title">Kapışma Tablosuna Hoş Geldin</div>
+      <div class="ui-msg">Devam etmek için adını gir. İstersen değiştirebilirsin.</div>
+    </div>
+    <div class="ui-body">
+      <input type="text" class="ui-input" id="gateName" placeholder="Adını yaz..." maxlength="24" autocomplete="name">
+      <div class="ui-err" id="gateErr"></div>
+    </div>
+    <div class="ui-actions">
+      <button class="ui-btn primary" onclick="submitGateName()">Devam Et</button>
+    </div>
+  </div>
 </div>
 
 <script>
-window.APP_BUILD = '2026.09.03.5';
+/* ============ GÜVENLİK ============ */
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[c]);
+}
+function safeUrl(u){
+  const s = String(u == null ? '' : u).trim();
+  if(!s) return '';
+  if(/^(https?:\/\/|data:image\/)/i.test(s)) return s.replace(/["'\\<>\s]/g,'');
+  return '';
+}
 
+/* ============ POP-UP SİSTEMİ ============ */
+const UI = (function(){
+  let host = null, resolver = null, kind = 'alert', opts = {};
+  function q(sel){ return host.querySelector(sel); }
+
+  function build(){
+    if(host) return;
+    host = document.createElement('div');
+    host.className = 'ui-backdrop';
+    host.innerHTML =
+      '<div class="ui-modal" role="dialog" aria-modal="true">' +
+        '<div class="ui-stripe" id="uiStripe"></div>' +
+        '<div class="ui-head">' +
+          '<div class="ui-icon" id="uiIcon">ℹ️</div>' +
+          '<div class="ui-title" id="uiTitle"></div>' +
+          '<div class="ui-msg" id="uiMsg"></div>' +
+        '</div>' +
+        '<div class="ui-body" id="uiBody" style="display:none;">' +
+          '<input type="text" class="ui-input" id="uiInput">' +
+          '<div class="ui-err" id="uiErr"></div>' +
+        '</div>' +
+        '<div class="ui-actions">' +
+          '<button class="ui-btn" id="uiCancel">Vazgeç</button>' +
+          '<button class="ui-btn primary" id="uiOk">Tamam</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(host);
+    host.addEventListener('click', e => { if(e.target === host) close(kind === 'alert' ? true : null); });
+    q('#uiCancel').addEventListener('click', () => close(null));
+    q('#uiOk').addEventListener('click', submit);
+    q('#uiInput').addEventListener('keydown', e => { if(e.key === 'Enter') submit(); });
+    document.addEventListener('keydown', e => {
+      if(!host.classList.contains('open')) return;
+      if(e.key === 'Escape') close(kind === 'alert' ? true : null);
+    });
+  }
+
+  function open(k, o){
+    build();
+    kind = k; opts = o || {};
+    const danger = !!opts.danger;
+    q('#uiStripe').className = 'ui-stripe' + (danger ? ' danger' : '');
+    q('#uiIcon').className = 'ui-icon' + (danger ? ' danger' : '');
+    q('#uiIcon').textContent = opts.icon || (k === 'prompt' ? '✎' : (danger ? '⚠️' : 'ℹ️'));
+    q('#uiTitle').textContent = opts.title || '';
+    q('#uiMsg').textContent = opts.message || '';
+    q('#uiMsg').style.display = opts.message ? 'block' : 'none';
+
+    const body = q('#uiBody'), input = q('#uiInput');
+    if(k === 'prompt'){
+      body.style.display = 'block';
+      input.value = opts.value || '';
+      input.placeholder = opts.placeholder || '';
+      input.maxLength = opts.maxlength || 60;
+    }else{
+      body.style.display = 'none';
+    }
+    q('#uiErr').textContent = '';
+
+    const cancel = q('#uiCancel'), ok = q('#uiOk');
+    cancel.style.display = (k === 'alert') ? 'none' : 'block';
+    cancel.textContent = opts.cancelText || 'Vazgeç';
+    ok.textContent = opts.okText || (k === 'alert' ? 'Tamam' : (k === 'prompt' ? 'Kaydet' : 'Evet'));
+    ok.className = 'ui-btn ' + (danger ? 'danger' : 'primary');
+
+    host.classList.add('open');
+    if(k === 'prompt') setTimeout(() => { try{ input.focus(); input.select(); }catch(e){} }, 80);
+    return new Promise(res => { resolver = res; });
+  }
+
+  function submit(){
+    if(kind === 'prompt'){
+      const v = q('#uiInput').value.trim();
+      const err = opts.validate ? opts.validate(v) : '';
+      if(err){ q('#uiErr').textContent = err; return; }
+      close(v);
+    }else{ close(true); }
+  }
+
+  function close(val){
+    host.classList.remove('open');
+    const r = resolver, k = kind;
+    resolver = null;
+    if(r) r(k === 'confirm' ? (val === true) : val);
+  }
+
+  return {
+    alert:   o => open('alert', o),
+    confirm: o => open('confirm', o),
+    prompt:  o => open('prompt', o),
+    toast(msg, isErr){
+      const wrap = document.getElementById('toastWrap');
+      if(!wrap) return;
+      const el = document.createElement('div');
+      el.className = 'toast' + (isErr ? ' err' : '');
+      el.textContent = msg;
+      wrap.appendChild(el);
+      setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 220); }, 2400);
+    }
+  };
+})();
+
+/* ============ KALICI DEPOLAMA ============ */
+const Store = {
+  get(k){
+    try{ const v = localStorage.getItem(k); if(v !== null) return v; }catch(e){}
+    try{ const v = sessionStorage.getItem(k); if(v !== null) return v; }catch(e){}
+    try{
+      const m = document.cookie.match(new RegExp('(?:^|; )' + k + '=([^;]*)'));
+      if(m) return decodeURIComponent(m[1]);
+    }catch(e){}
+    return '';
+  },
+  set(k, v){
+    try{ localStorage.setItem(k, v); }catch(e){}
+    try{ sessionStorage.setItem(k, v); }catch(e){}
+    try{ document.cookie = k + '=' + encodeURIComponent(v) + ';path=/;max-age=31536000;SameSite=Lax'; }catch(e){}
+  }
+};
+
+/* ============ KİMLİK — isim HER GİRİŞTE sorulur ============ */
+const NAME_KEY = 'kapisma_user_name';
+const UID_KEY  = 'kapisma_user_uid';
+const SEEN_KEY = 'kapisma_last_seen';
+
+let userName = '';                       // yalnızca bu oturum için geçerli
+function getUserName(){ return userName; }
+
+function getUid(){
+  let u = Store.get(UID_KEY);
+  if(!u){
+    u = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    Store.set(UID_KEY, u);
+  }
+  return u;
+}
+const MY_UID = getUid();
+
+function submitGateName(){
+  const val = document.getElementById('gateName').value.trim();
+  if(val.length < 2){ document.getElementById('gateErr').textContent = 'En az 2 karakterlik bir isim gir'; return; }
+  userName = val;
+  Store.set(NAME_KEY, val);              // bir dahaki girişte kutuya ön-dolgu olarak gelir
+  document.getElementById('gateOverlay').classList.add('done');
+  paintWho();
+  UI.toast('Hoş geldin, ' + val);
+}
+
+async function changeName(){
+  const v = await UI.prompt({
+    icon:'👤', title:'Görünen Adın',
+    message:'Sohbette bu isimle görüneceksin.',
+    value:getUserName(), placeholder:'Adını yaz...', maxlength:24, okText:'Kaydet',
+    validate: x => x.length < 2 ? 'En az 2 karakterlik bir isim gir' : ''
+  });
+  if(v === null) return;
+  userName = v;
+  Store.set(NAME_KEY, v);
+  paintWho();
+  UI.toast('İsim güncellendi');
+}
+
+function paintWho(){ document.getElementById('whoLabel').textContent = getUserName() || '—'; }
+
+(function initGate(){
+  /* Kapı HER açılışta gösterilir. Önceki isim sadece ön-dolgu olarak gelir. */
+  const prev = Store.get(NAME_KEY);
+  const input = document.getElementById('gateName');
+  if(prev) input.value = prev;
+  paintWho();
+  setTimeout(() => { try{ input.focus(); input.select(); }catch(e){} }, 250);
+})();
+document.getElementById('gateName').addEventListener('keydown', e => { if(e.key === 'Enter') submitGateName(); });
+
+/* ============ FIREBASE ============ */
 const firebaseConfig = {
   apiKey: "AIzaSyByRs32guz2QBcoDFcA_q0BvWo_VuX9bmg",
   authDomain: "kapisma-tablosu.firebaseapp.com",
@@ -234,582 +507,769 @@ const firebaseConfig = {
   appId: "1:972484258564:web:31ac5ca3e79aef62437e51"
 };
 
-const MAX_NAME = 40;
-const MIN_NAME = 2;
-const MAX_MESSAGE = 500;
-
 let db = null;
-let configOk = false;
+let configOk = !!firebaseConfig.apiKey;
 let latestData = null;
 let latestMatches = [];
 let latestComments = [];
-let viewerName = '';
-let viewerId = '';
-let activeTab = 'stats';
-let boardShown = false;
-let seasonFilter = 'all';
-let unread = false;
-let seenCount = 0;
+let activeTab = 'sezon';
+let activeSeason = 'all';        // H2H ve sezon toplamları için filtre
+let replyTarget = null;
+let editTarget = null;
+let pendingImage = null;      // gönderilmeyi bekleyen sıkıştırılmış dataURL
+let sheetOpen = false;
+let lastSeen = Store.get(SEEN_KEY) || '';
+let unreadMarker = '';        // listede "yeni mesajlar" çizgisinin yeri
+const imgCache = new Map();
 
-document.getElementById('buildLine').textContent = 'Sürüm ' + window.APP_BUILD;
-
-/* ---------- yardımcılar ---------- */
-
-const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ESCAPES[c]); }
-
-function safeUrl(v) {
-  const s = String(v == null ? '' : v).trim();
-  if (/^https?:\/\//i.test(s)) return s;
-  if (/^data:image\/(png|jpe?g|gif|webp);base64,/i.test(s)) return s;
-  return '';
+/* ============ OKUNMAMIŞ SAYACI ============ */
+function unreadCount(){
+  return latestComments.filter(c => c.uid !== MY_UID && (c.time || '') > lastSeen).length;
 }
-
-function initials(name) {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  const a = parts[0].charAt(0);
-  const b = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
-  return (a + b).toLocaleUpperCase('tr');
+function paintBadge(){
+  const n = unreadCount();
+  const badge = document.getElementById('fabCount');
+  badge.textContent = n > 99 ? '99+' : n;
+  badge.classList.toggle('on', n > 0);
 }
-
-function num(v) { const n = parseFloat(v); return isFinite(n) ? n : 0; }
-function fmtNum(n) { return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100); }
-
-function fmtClock(iso) {
-  const d = iso ? new Date(iso) : null;
-  if (!d || isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-}
-
-function fmtDay(iso) {
-  const d = iso ? new Date(iso) : null;
-  if (!d || isNaN(d.getTime())) return '';
-  const today = new Date();
-  const yesterday = new Date(today.getTime() - 86400000);
-  if (d.toDateString() === today.toDateString()) return 'Bugün';
-  if (d.toDateString() === yesterday.toDateString()) return 'Dün';
-  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function fmtStamp(iso) {
-  const d = iso ? new Date(iso) : null;
-  if (!d || isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) + ' ' + fmtClock(iso);
-}
-
-/* ---------- kimlik ---------- */
-
-const store = (function () {
-  let usable = false;
-  const mem = {};
-  try {
-    window.localStorage.setItem('__kt', '1');
-    window.localStorage.removeItem('__kt');
-    usable = true;
-  } catch (e) { usable = false; }
-  return {
-    get: function (k) { try { return usable ? window.localStorage.getItem(k) : (mem[k] || null); } catch (e) { return mem[k] || null; } },
-    set: function (k, v) { try { if (usable) window.localStorage.setItem(k, v); else mem[k] = v; } catch (e) { mem[k] = v; } }
-  };
-})();
-
-function cleanName(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, MAX_NAME); }
-function newId() { return 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
-
-function openGate(prefill) {
-  const input = document.getElementById('gateName');
-  document.getElementById('gate').hidden = false;
-  document.body.style.overflow = 'hidden';
-  input.value = prefill || '';
-  document.getElementById('gateNote').textContent = '';
-  setTimeout(function () { input.focus(); input.select(); }, 30);
-}
-
-function submitName() {
-  const name = cleanName(document.getElementById('gateName').value);
-  if (name.length < MIN_NAME) {
-    document.getElementById('gateNote').textContent = 'En az ' + MIN_NAME + ' harf gerekli';
-    document.getElementById('gateName').focus();
-    return;
+function markSeen(){
+  let newest = lastSeen;
+  latestComments.forEach(c => { if((c.time || '') > newest) newest = c.time; });
+  if(newest && newest !== lastSeen){
+    lastSeen = newest;
+    Store.set(SEEN_KEY, lastSeen);
   }
-  viewerName = name;
-  store.set('kt_name', name);
-  if (!viewerId) { viewerId = store.get('kt_id') || newId(); store.set('kt_id', viewerId); }
-  document.getElementById('gate').hidden = true;
-  document.body.style.overflow = '';
-  renderWho();
-  render();
+  paintBadge();
 }
 
-function renderWho() {
-  const who = document.getElementById('who');
-  if (!viewerName) { who.hidden = true; return; }
-  who.hidden = false;
-  document.getElementById('whoName').textContent = viewerName;
-  document.getElementById('whoDot').textContent = initials(viewerName);
+/* ============ ROZET ============ */
+function renderBadge(player, side){
+  const initial = esc((player.name || '?').trim().charAt(0).toUpperCase());
+  const photo = safeUrl(player.photo);
+  const style = photo ? "background-image:url('" + photo + "')" : '';
+  return '<div class="badge ' + side + '" style="' + style + '">' + (photo ? '' : initial) + '</div>';
 }
 
-function toggleMenu(force) {
-  const menu = document.getElementById('whoMenu');
-  const btn = document.getElementById('whoBtn');
-  const open = typeof force === 'boolean' ? force : menu.hidden;
-  menu.hidden = !open;
-  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-}
-
-document.getElementById('gateGo').addEventListener('click', submitName);
-document.getElementById('gateName').addEventListener('keydown', function (e) {
-  if (e.key === 'Enter') { e.preventDefault(); submitName(); }
-});
-document.getElementById('whoBtn').addEventListener('click', function (e) { e.stopPropagation(); toggleMenu(); });
-document.addEventListener('click', function () { toggleMenu(false); });
-document.addEventListener('keydown', function (e) { if (e.key === 'Escape') toggleMenu(false); });
-document.getElementById('menuRename').addEventListener('click', function () { toggleMenu(false); openGate(viewerName); });
-document.getElementById('menuPrint').addEventListener('click', function () { toggleMenu(false); window.print(); });
-
-/* ---------- hesaplamalar ---------- */
-
-function seasonsOf(matches) {
-  const seen = [];
-  (matches || []).forEach(function (m) {
-    const s = m.season || 'Sezon yok';
-    if (seen.indexOf(s) < 0) seen.push(s);
-  });
-  return seen.sort(function (a, b) { return a.localeCompare(b, 'tr'); });
-}
-
-function shownMatches() {
-  if (seasonFilter === 'all') return latestMatches;
-  return latestMatches.filter(function (m) { return (m.season || 'Sezon yok') === seasonFilter; });
-}
-
-function computeH2H(matches) {
-  let w1 = 0, w2 = 0, d = 0;
-  (matches || []).forEach(function (m) {
-    const a = num(m.w1), b = num(m.w2);
-    if (a > b) w1++; else if (b > a) w2++; else d++;
-  });
-  return { w1: w1, w2: w2, draws: d, total: (matches || []).length };
-}
-
-function computeSeasons(matches) {
-  const map = {};
-  (matches || []).forEach(function (m) {
-    const s = m.season || 'Sezon yok';
-    if (!map[s]) map[s] = { season: s, matches: 0, w1: 0, w2: 0, draws: 0 };
-    map[s].matches++;
-    const a = num(m.w1), b = num(m.w2);
-    if (a > b) map[s].w1++; else if (b > a) map[s].w2++; else map[s].draws++;
-  });
-  return Object.keys(map).map(function (k) { return map[k]; })
-    .sort(function (x, y) { return x.season.localeCompare(y.season, 'tr'); });
-}
-
-function scoreOf(statsList) {
-  let w1 = 0, w2 = 0, counted = 0;
-  (statsList || []).forEach(function (s) {
-    if (s.score === false) return;
-    counted++;
-    const a = num(s.v1), b = num(s.v2);
-    if (a > b) w1++; else if (b > a) w2++;
-  });
-  return { w1: w1, w2: w2, counted: counted };
-}
-
-function normalizeVideos(data) {
-  const v = (data && data.videos) || {};
-  const pick = function (list, legacy) {
-    if (Array.isArray(list)) return list;
-    return safeUrl(legacy) ? [{ title: 'Video', url: safeUrl(legacy) }] : [];
-  };
-  return { list1: pick(v.list1, v.link1), list2: pick(v.list2, v.link2) };
-}
-
-function ytId(url) {
-  const m = String(url).match(/(?:youtube\.com\/(?:watch\?(?:[^&]*&)*v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-  return m ? m[1] : '';
-}
-
-/* ---------- parçalar ---------- */
-
-function avatar(player, cls) {
-  const src = safeUrl(player.photo);
-  const mono = '<span class="mono">' + esc(initials(player.name)) + '</span>';
-  const inner = src ? '<img src="' + esc(src) + '" alt="' + esc(player.name) + '" loading="lazy" data-fallback="1">' : mono;
-  return '<div class="avatar ' + cls + '" data-mono="' + esc(initials(player.name)) + '">' + inner + '</div>';
-}
-
-function boardSection(p1, p2, data) {
-  const h = computeH2H(shownMatches());
-  const scope = seasonFilter === 'all' ? '' : seasonFilter + ' sezonunda ';
-  const note = h.total === 0
-    ? (seasonFilter === 'all' ? 'Kayıtlı maç yok, rekor ilk kayıtla başlıyor' : 'Bu sezonda kayıtlı maç yok')
-    : scope + h.total + ' maçlık geçmiş, ' + h.draws + ' beraberlik';
-
-  const all = seasonsOf(latestMatches);
-  let picker = '';
-  if (all.length > 1) {
-    const opts = ['<option value="all">Tüm sezonlar</option>'].concat(all.map(function (s) {
-      return '<option value="' + esc(s) + '"' + (s === seasonFilter ? ' selected' : '') + '>' + esc(s) + '</option>';
-    })).join('');
-    picker = '<div class="season-pick"><select id="seasonPick" aria-label="Sezon filtresi">' + opts + '</select></div>';
-  }
-
-  const stamp = data.updatedAt ? '<span class="stamp">Son güncelleme ' + esc(fmtStamp(data.updatedAt)) + '</span>' : '';
-
-  return '<section class="board' + (boardShown ? '' : ' reveal') + '">' +
-    '<div class="board-grid">' +
-      '<div class="side">' + avatar(p1, 'home') +
-        '<div><div class="pname">' + esc(p1.name) + '</div><div class="pteam">' + esc(p1.team || 'takım yok') + '</div></div></div>' +
-      '<div class="tally"><span class="h">' + h.w1 + '</span><span class="d">-</span><span class="a">' + h.w2 + '</span></div>' +
-      '<div class="side">' + avatar(p2, 'away') +
-        '<div><div class="pname">' + esc(p2.name) + '</div><div class="pteam">' + esc(p2.team || 'takım yok') + '</div></div></div>' +
-    '</div><p class="board-note">' + esc(note) + stamp + '</p>' + picker + '</section>';
-}
-
-function statsPanel(p1, p2, statsList) {
-  const sc = scoreOf(statsList);
-  let rows = '';
-  statsList.forEach(function (s) {
-    const a = num(s.v1), b = num(s.v2);
-    const scoring = s.score !== false;
-    const max = Math.max(Math.abs(a), Math.abs(b), 1);
-    const wonL = a > b, wonR = b > a;
-    rows += '<div class="stat' + (scoring ? '' : ' off') + '">' +
-      '<div class="stat-head">' +
-        '<div class="val l ' + (wonL && scoring ? 'won' : '') + '">' + fmtNum(a) + '</div>' +
-        '<div class="stat-name">' + esc(s.label) + (scoring ? '' : '<em>skora sayılmaz</em>') + '</div>' +
-        '<div class="val r ' + (wonR && scoring ? 'won' : '') + '">' + fmtNum(b) + '</div>' +
-      '</div>' +
-      '<div class="track">' +
-        '<div class="half l"><div class="fill l" style="width:' + (Math.abs(a) / max * 100) + '%"></div></div>' +
-        '<div class="half r"><div class="fill r" style="width:' + (Math.abs(b) / max * 100) + '%"></div></div>' +
-      '</div></div>';
-  });
-
-  let verdict;
-  if (sc.counted === 0) verdict = 'Skora sayılan istatistik yok';
-  else if (sc.w1 === sc.w2) verdict = 'Bu maç berabere bitti';
-  else verdict = 'Bu maçta üstün olan <b>' + esc(sc.w1 > sc.w2 ? p1.name : p2.name) + '</b>';
-
-  return rows + '<div class="verdict"><span>' + verdict + '</span>' +
-    (sc.counted ? '<span class="score">' + sc.w1 + ' - ' + sc.w2 + '</span>' : '') + '</div>';
-}
-
-function seasonPanel(p1, p2) {
-  const seasons = computeSeasons(shownMatches());
-  if (seasons.length === 0) {
-    return '<div class="blank">' + (seasonFilter === 'all' ? 'Sezon tablosu için önce maç kaydedilmeli' : 'Bu sezonda kayıt yok') + '</div>';
-  }
-  const rows = seasons.map(function (s) {
-    return '<tr><td>' + esc(s.season) + '</td><td>' + s.matches + '</td>' +
-      '<td class="num h">' + s.w1 + '</td><td class="num a">' + s.w2 + '</td>' +
-      '<td class="num">' + s.draws + '</td></tr>';
-  }).join('');
-  return '<table class="grid-table"><thead><tr><th>Sezon</th><th>Maç</th>' +
-    '<th>' + esc(p1.name) + '</th><th>' + esc(p2.name) + '</th><th>Berabere</th></tr></thead>' +
-    '<tbody>' + rows + '</tbody></table>';
-}
-
-function videoPanel(p1, p2, data) {
-  const v = normalizeVideos(data);
-  const group = function (list, player, cls) {
-    const items = (list || []).map(function (item) {
-      const url = safeUrl(item.url);
-      if (!url) return '';
-      const id = ytId(url);
-      const thumb = id
-        ? '<img src="https://img.youtube.com/vi/' + esc(id) + '/mqdefault.jpg" alt="" loading="lazy">'
-        : '<div class="ph">bağlantı</div>';
-      const title = (item.title && String(item.title).trim()) || (id ? 'YouTube videosu' : 'Bağlantı');
-      return '<a class="vid" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + thumb + '<span>' + esc(title) + '</span></a>';
-    }).join('');
-    return items ? '<div class="vid-group ' + cls + '"><h4>' + esc(player.name) + '</h4>' + items + '</div>' : '';
-  };
-  const html = group(v.list1, p1, 'home') + group(v.list2, p2, 'away');
-  return html || '<div class="blank">Henüz bağlantı eklenmemiş</div>';
-}
-
-function chatPanel() {
-  return '<div class="chat">' +
-      '<div class="chat-scroll" id="chatScroll"><div class="chat-inner" id="msgList"></div></div>' +
-      '<div class="composer">' +
-        '<div class="composer-row">' +
-          '<textarea id="msgText" rows="1" maxlength="' + MAX_MESSAGE + '" placeholder="Mesaj yaz"></textarea>' +
-          '<button class="btn" type="button" id="msgSend">Gönder</button>' +
-        '</div>' +
-        '<div class="composer-meta"><span class="as">Yazan <b>' + esc(viewerName) + '</b></span>' +
-        '<span class="counter" id="msgCount">0/' + MAX_MESSAGE + '</span></div>' +
-      '</div>' +
-    '</div><div class="note" id="msgNote"></div>';
-}
-
-function videoCount(data) {
-  const v = normalizeVideos(data);
-  const live = function (list) { return (list || []).filter(function (x) { return safeUrl(x.url); }).length; };
-  return live(v.list1) + live(v.list2);
-}
-
-/* ---------- çizim ---------- */
-
-function render() {
-  const content = document.getElementById('content');
-  const data = latestData;
-  const oldText = document.getElementById('msgText');
-  const draft = oldText ? oldText.value : '';
-
-  if (!data || !Array.isArray(data.stats) || data.stats.length === 0) {
-    content.innerHTML = '<div class="blank">Tablo henüz hazır değil.<br>Admin panelinden istatistikler girilince burada görünecek.</div>';
-    return;
-  }
-
-  const p1 = Object.assign({ name: 'Oyuncu 1', team: '', photo: '' }, data.player1 || {});
-  const p2 = Object.assign({ name: 'Oyuncu 2', team: '', photo: '' }, data.player2 || {});
-  document.title = p1.name + ' - ' + p2.name + ' | Kapışma Tablosu';
-
-  const tabs = [
-    { id: 'stats', label: 'Karşılaştırma', count: data.stats.length },
-    { id: 'seasons', label: 'Sezonlar', count: computeSeasons(shownMatches()).length },
-    { id: 'videos', label: 'Videolar', count: videoCount(data) },
-    { id: 'talk', label: 'Tartışma', count: latestComments.length }
-  ];
-
-  const tabBar = '<nav class="tabs" role="tablist">' + tabs.map(function (t) {
-    const ping = (t.id === 'talk' && unread && activeTab !== 'talk') ? '<span class="ping"></span>' : '';
-    return '<button class="tab" type="button" role="tab" data-tab="' + t.id + '" aria-selected="' + (t.id === activeTab) + '">' +
-      esc(t.label) + (t.count ? '<span class="count">' + t.count + '</span>' : '') + ping + '</button>';
-  }).join('') + '</nav>';
-
-  const panels =
-    '<div class="panel" data-panel="stats"' + (activeTab === 'stats' ? '' : ' hidden') + '>' + statsPanel(p1, p2, data.stats) + '</div>' +
-    '<div class="panel" data-panel="seasons"' + (activeTab === 'seasons' ? '' : ' hidden') + '>' + seasonPanel(p1, p2) + '</div>' +
-    '<div class="panel" data-panel="videos"' + (activeTab === 'videos' ? '' : ' hidden') + '>' + videoPanel(p1, p2, data) + '</div>' +
-    '<div class="panel" data-panel="talk"' + (activeTab === 'talk' ? '' : ' hidden') + '>' + chatPanel() + '</div>';
-
-  content.innerHTML = boardSection(p1, p2, data) + tabBar + panels;
-  boardShown = true;
-
-  content.querySelectorAll('.avatar img[data-fallback]').forEach(function (img) {
-    img.addEventListener('error', function () {
-      const box = img.parentNode;
-      box.innerHTML = '<span class="mono">' + esc(box.getAttribute('data-mono') || '?') + '</span>';
-    });
-  });
-
-  content.querySelectorAll('.tab').forEach(function (btn) {
-    btn.addEventListener('click', function () { selectTab(btn.getAttribute('data-tab')); });
-  });
-
-  const pick = document.getElementById('seasonPick');
-  if (pick) pick.addEventListener('change', function () { seasonFilter = pick.value; render(); });
-
-  const text = document.getElementById('msgText');
-  text.value = draft;
-  text.addEventListener('input', function () { autoGrow(text); updateCounter(); });
-  text.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); postComment(); }
-  });
-  document.getElementById('msgSend').addEventListener('click', postComment);
-  autoGrow(text);
-  updateCounter();
-  renderComments(true);
-}
-
-function autoGrow(node) {
-  node.style.height = 'auto';
-  node.style.height = Math.min(node.scrollHeight, 120) + 'px';
-}
-
-function selectTab(id) {
-  activeTab = id;
-  document.querySelectorAll('.tab').forEach(function (b) {
-    b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === id));
-  });
-  document.querySelectorAll('.panel').forEach(function (p) {
-    p.hidden = p.getAttribute('data-panel') !== id;
-  });
-  if (id === 'talk') {
-    unread = false;
-    seenCount = latestComments.length;
-    const ping = document.querySelector('.tab[data-tab="talk"] .ping');
-    if (ping) ping.remove();
-    scrollChat(true);
-    const text = document.getElementById('msgText');
-    if (text) autoGrow(text);
-  }
-}
-
-function scrollChat(force) {
-  const box = document.getElementById('chatScroll');
-  if (!box) return;
-  if (!force) {
-    const gap = box.scrollHeight - box.scrollTop - box.clientHeight;
-    if (gap > 120) return;
-  }
-  requestAnimationFrame(function () { box.scrollTop = box.scrollHeight; });
-}
-
-function updateCounter() {
-  const text = document.getElementById('msgText');
-  const counter = document.getElementById('msgCount');
-  if (!text || !counter) return;
-  const n = text.value.length;
-  counter.textContent = n + '/' + MAX_MESSAGE;
-  counter.className = 'counter' + (n >= MAX_MESSAGE ? ' over' : '');
-}
-
-function renderComments(forceScroll) {
+/* ============ SOHBET ============ */
+function openSheet(){
+  sheetOpen = true;
+  unreadMarker = lastSeen;               // çizgi açılış anındaki sınırda kalsın
+  document.getElementById('sheetBackdrop').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+  renderMessages();
+  markSeen();
   const list = document.getElementById('msgList');
-  if (!list) return;
+  setTimeout(() => { if(list) list.scrollTop = list.scrollHeight; }, 60);
+}
+function closeSheet(){
+  sheetOpen = false;
+  unreadMarker = '';
+  document.getElementById('sheetBackdrop').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+  cancelCompose();
+}
 
-  if (latestComments.length === 0) {
-    list.innerHTML = '<div class="chat-empty">Henüz mesaj yok, ilk sözü sen söyle</div>';
+function fmtTime(t){
+  if(!t) return '';
+  try{ return new Date(t).toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); }
+  catch(e){ return ''; }
+}
+
+/* ============ FOTOĞRAF ============ */
+const MAX_UPLOAD_BYTES  = 15 * 1024 * 1024;   // kullanıcının seçebileceği en büyük dosya
+const TARGET_EDGE       = 1280;               // sıkıştırma sonrası en uzun kenar
+const TARGET_BYTES      = 190 * 1024;         // Firestore dokümanı için hedef boyut
+
+function compressImage(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Dosya okunamadı'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Geçersiz görsel'));
+      img.onload = () => {
+        try{
+          let w = img.naturalWidth, h = img.naturalHeight;
+          if(!w || !h) return reject(new Error('Boyut okunamadı'));
+          /* En-boy oranı korunur — ekran görüntüleri kırpılmaz */
+          const scale = Math.min(1, TARGET_EDGE / Math.max(w, h));
+          w = Math.max(1, Math.round(w * scale));
+          h = Math.max(1, Math.round(h * scale));
+
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const draw = () => {
+            canvas.width = w; canvas.height = h;
+            ctx.fillStyle = '#ffffff';        // PNG şeffaflığı siyaha dönmesin
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+          };
+
+          draw();
+          let quality = 0.82;
+          let out = canvas.toDataURL('image/jpeg', quality);
+          const bytes = s => Math.round(s.length * 0.75);
+
+          while(bytes(out) > TARGET_BYTES && quality > 0.35){
+            quality -= 0.1;
+            out = canvas.toDataURL('image/jpeg', quality);
+          }
+          let guard = 0;
+          while(bytes(out) > TARGET_BYTES && guard < 4){
+            w = Math.max(1, Math.round(w * 0.8));
+            h = Math.max(1, Math.round(h * 0.8));
+            draw();
+            out = canvas.toDataURL('image/jpeg', 0.7);
+            guard++;
+          }
+          if(bytes(out) > 700 * 1024) return reject(new Error('Fotoğraf küçültülemedi'));
+          resolve(out);
+        }catch(err){ reject(err); }
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('fileInput').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';                    // aynı dosya tekrar seçilebilsin
+  if(!file) return;
+  if(!/^image\//i.test(file.type)){ UI.toast('Sadece resim dosyası yükleyebilirsin', true); return; }
+  if(file.size > MAX_UPLOAD_BYTES){
+    UI.toast('Fotoğraf en fazla 15 MB olabilir', true);
+    return;
+  }
+  const btn = document.getElementById('attachBtn');
+  btn.classList.add('busy');
+  UI.toast('Fotoğraf hazırlanıyor…');
+  try{
+    const data = await compressImage(file);
+    if(editTarget){
+      /* Düzenleme modunda: mevcut fotoğrafın yerine geçer */
+      editTarget.newImage = data;
+      editTarget.removeImage = false;
+      UI.toast('Fotoğraf değiştirildi — kaydetmek için ✓');
+    }else{
+      pendingImage = data;
+    }
+    paintCompose();
+  }catch(err){
+    if(!editTarget) pendingImage = null;
+    UI.toast('Fotoğraf işlenemedi: ' + err.message, true);
+  }
+  btn.classList.remove('busy');
+});
+
+function openLightbox(src){
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){
+  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lightboxImg').src = '';
+}
+
+/* Fotoğraflar ayrı koleksiyonda tutulur, yalnızca görünürken çekilir */
+async function hydrateImages(){
+  const slots = document.querySelectorAll('.msg-img-wrap[data-img]');
+  for(const slot of slots){
+    const id = slot.dataset.img;
+    if(!id || slot.dataset.done === '1') continue;
+    slot.dataset.done = '1';
+    let data = imgCache.get(id);
+    if(!data){
+      try{
+        const snap = await db.collection('kapisma_images').doc(id).get();
+        data = snap.exists ? (snap.data().data || '') : '';
+        if(data) imgCache.set(id, data);
+      }catch(err){ data = ''; }
+    }
+    const url = safeUrl(data);
+    if(url){
+      slot.innerHTML = '<img alt="Fotoğraf" loading="lazy">';
+      slot.querySelector('img').src = url;
+    }else{
+      slot.innerHTML = '<div class="img-loading">Fotoğraf yüklenemedi</div>';
+    }
+  }
+}
+
+function renderMessages(){
+  const list = document.getElementById('msgList');
+  if(!latestComments.length){
+    list.innerHTML = '<div class="msg-empty">Henüz mesaj yok —<br>ilk mesajı sen yaz!</div>';
+    return;
+  }
+  const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+  let markerPlaced = !unreadMarker;
+
+  list.innerHTML = latestComments.map(c => {
+    const mine = c.uid && c.uid === MY_UID;
+    let divider = '';
+    if(!markerPlaced && !mine && (c.time || '') > unreadMarker){
+      divider = '<div class="unread-line"><span>Yeni mesajlar</span></div>';
+      markerPlaced = true;
+    }
+    const quote = c.replyTo
+      ? '<div class="msg-quote"><b>↩︎ ' + esc(c.replyTo.name || '') + '</b><span>' +
+        esc(c.replyTo.message || (c.replyTo.imageId ? '📷 Fotoğraf' : '')) + '</span></div>'
+      : '';
+    const image = c.imageId
+      ? '<div class="msg-img-wrap" data-img="' + esc(c.imageId) + '"><div class="img-loading">Fotoğraf yükleniyor…</div></div>'
+      : '';
+    const text = c.message ? '<div class="mtext">' + esc(c.message) + '</div>' : '';
+    const photoActions = (mine && c.imageId)
+      ? '<button data-act="changeimg" data-id="' + esc(c.id) + '">🖼 Fotoğrafı değiştir</button>' +
+        '<button class="danger" data-act="delimg" data-id="' + esc(c.id) + '">🖼 Fotoğrafı sil</button>'
+      : '';
+    const own = mine
+      ? '<button data-act="edit" data-id="' + esc(c.id) + '">✎ Düzenle</button>' + photoActions +
+        '<button class="danger" data-act="delete" data-id="' + esc(c.id) + '">🗑 Sil</button>'
+      : '';
+    return divider + '<div class="msg-item' + (mine ? ' mine' : '') + '">' +
+      '<div class="msg-head">' +
+        '<span class="mname">' + esc(c.name || 'Anonim') + (mine ? ' (sen)' : '') + '</span>' +
+        '<span class="mtime">' + esc(fmtTime(c.time)) + (c.edited ? ' · düzenlendi' : '') + '</span>' +
+      '</div>' + quote + text + image +
+      '<div class="msg-actions">' +
+        '<button data-act="reply" data-id="' + esc(c.id) + '">↩︎ Yanıtla</button>' + own +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  if(atBottom) list.scrollTop = list.scrollHeight;
+  if(db) hydrateImages();
+}
+
+document.getElementById('msgList').addEventListener('click', e => {
+  const img = e.target.closest('.msg-img-wrap img');
+  if(img && img.src){ openLightbox(img.src); return; }
+  const btn = e.target.closest('button[data-act]');
+  if(!btn) return;
+  const c = latestComments.find(x => x.id === btn.dataset.id);
+  if(!c) return;
+  if(btn.dataset.act === 'reply') startReply(c);
+  else if(btn.dataset.act === 'edit') startEdit(c);
+  else if(btn.dataset.act === 'delete') deleteMsg(c);
+  else if(btn.dataset.act === 'changeimg') changePhoto(c);
+  else if(btn.dataset.act === 'delimg') deletePhoto(c);
+});
+
+/* Mesajı düzenleme moduna alıp doğrudan dosya seçiciyi açar */
+function changePhoto(c){
+  startEdit(c);
+  document.getElementById('fileInput').click();
+}
+
+/* Yalnızca fotoğrafı siler, metni bırakır — onay sormaz */
+async function deletePhoto(c){
+  if(!db) return;
+  if(c.uid !== MY_UID){ UI.toast('Sadece kendi fotoğrafını silebilirsin', true); return; }
+  if(!c.imageId) return;
+  if(!String(c.message || '').trim()){
+    UI.toast('Metin yok — mesajın tamamını sil', true);
+    return;
+  }
+  if(editTarget && editTarget.id === c.id) cancelCompose();
+  try{
+    await db.collection('kapisma_comments').doc(c.id).update({
+      imageId: firebase.firestore.FieldValue.delete(),
+      edited: true,
+      editedAt: new Date().toISOString()
+    });
+    imgCache.delete(c.imageId);
+    try{ await db.collection('kapisma_images').doc(c.imageId).delete(); }catch(e){}
+    UI.toast('Fotoğraf silindi');
+  }catch(err){
+    UI.toast('Silinemedi: ' + err.message, true);
+  }
+}
+
+/* Düzenleme modunda o an geçerli olan fotoğraf (yenisi varsa o, kaldırıldıysa yok) */
+function editImageData(){
+  if(!editTarget) return '';
+  if(editTarget.newImage) return editTarget.newImage;
+  if(editTarget.removeImage) return '';
+  return editTarget.imageId ? (imgCache.get(editTarget.imageId) || '') : '';
+}
+function editHasImage(){
+  if(!editTarget) return false;
+  if(editTarget.newImage) return true;
+  return !!editTarget.imageId && !editTarget.removeImage;
+}
+
+function removePendingPhoto(){
+  if(editTarget){
+    editTarget.newImage = null;
+    editTarget.removeImage = true;
+    UI.toast('Fotoğraf kaldırılacak — kaydetmek için ✓');
+  }else{
+    pendingImage = null;
+  }
+  paintCompose();
+}
+
+function paintCompose(){
+  const box = document.getElementById('composeCtx');
+  const tag = document.getElementById('ctxTag');
+  const txt = document.getElementById('ctxText');
+  const thumb = document.getElementById('ctxThumb');
+  const delBtn = document.getElementById('ctxDelImg');
+  const send = document.getElementById('sendBtn');
+
+  thumb.classList.remove('on');
+  delBtn.classList.remove('on');
+
+  const editImg = editImageData();
+  if(editTarget && editImg){
+    thumb.src = editImg;
+    thumb.classList.add('on');
+  }else if(!editTarget && pendingImage){
+    thumb.src = pendingImage;
+    thumb.classList.add('on');
+  }
+  if((editTarget && editHasImage()) || (!editTarget && pendingImage)){
+    delBtn.classList.add('on');
+  }
+
+  if(editTarget){
+    box.classList.add('open');
+    tag.textContent = editTarget.newImage
+      ? '✎ Düzenleniyor · fotoğraf değişti'
+      : (editTarget.removeImage ? '✎ Düzenleniyor · fotoğraf kaldırılacak' : '✎ Mesajını düzenliyorsun');
+    txt.textContent = editHasImage()
+      ? (editTarget.message || '📷 Fotoğraf') + ' · 📎 ile değiştir'
+      : (editTarget.message || 'Metni düzenle');
+    send.textContent = '✓';
+  }else if(pendingImage && replyTarget){
+    box.classList.add('open');
+    tag.textContent = '📷 Fotoğraf · ' + replyTarget.name + ' kullanıcısına yanıt';
+    txt.textContent = replyTarget.message || '📷 Fotoğraf';
+    send.textContent = '➤';
+  }else if(pendingImage){
+    box.classList.add('open');
+    tag.textContent = '📷 Fotoğraf eklendi';
+    txt.textContent = 'Göndermek için ➤ tuşuna bas';
+    send.textContent = '➤';
+  }else if(replyTarget){
+    box.classList.add('open');
+    tag.textContent = '↩︎ ' + replyTarget.name + ' kullanıcısına yanıt';
+    txt.textContent = replyTarget.message || '📷 Fotoğraf';
+    send.textContent = '➤';
+  }else{
+    box.classList.remove('open');
+    send.textContent = '➤';
+  }
+}
+
+function startReply(c){
+  editTarget = null;
+  replyTarget = {id:c.id, name:c.name || 'Anonim', message:c.message || '', imageId:c.imageId || ''};
+  document.getElementById('msgInput').value = '';
+  paintCompose();
+  document.getElementById('msgInput').focus();
+}
+
+function startEdit(c){
+  replyTarget = null;
+  pendingImage = null;
+  editTarget = {
+    id: c.id,
+    message: c.message || '',
+    imageId: c.imageId || '',
+    newImage: null,
+    removeImage: false
+  };
+  const input = document.getElementById('msgInput');
+  input.value = c.message || '';
+  paintCompose();
+  input.focus();
+}
+
+function cancelCompose(){
+  replyTarget = null;
+  editTarget = null;
+  pendingImage = null;
+  paintCompose();
+}
+
+/* Onay sormadan siler */
+async function deleteMsg(c){
+  if(!db) return;
+  if(c.uid !== MY_UID){ UI.toast('Sadece kendi mesajını silebilirsin', true); return; }
+  if(editTarget && editTarget.id === c.id) cancelCompose();
+  try{
+    await db.collection('kapisma_comments').doc(c.id).delete();
+    if(c.imageId){
+      imgCache.delete(c.imageId);
+      try{ await db.collection('kapisma_images').doc(c.imageId).delete(); }catch(e){}
+    }
+    UI.toast('Mesaj silindi');
+  }catch(err){
+    UI.toast('Silinemedi: ' + err.message, true);
+  }
+}
+
+async function sendMessage(){
+  const input = document.getElementById('msgInput');
+  const message = input.value.trim();
+  if(!db) return;
+  if(!getUserName()){
+    document.getElementById('gateOverlay').classList.remove('done');
+    return;
+  }
+  if(editTarget){
+    if(!message && !editHasImage()){
+      UI.toast('Mesaj boş kalamaz — metin yaz veya mesajı sil', true);
+      return;
+    }
+  }else if(!message && !pendingImage){
     return;
   }
 
-  let html = '';
-  let lastDay = '';
-  latestComments.forEach(function (c) {
-    const day = fmtDay(c.time);
-    if (day && day !== lastDay) { html += '<div class="day">' + esc(day) + '</div>'; lastDay = day; }
-    const mine = viewerId && c.uid === viewerId;
-    html += '<div class="msg ' + (mine ? 'right' : 'left') + '"><div class="bubble">' +
-      '<div class="nm">' + esc(c.name || 'Anonim') + '</div>' +
-      '<div class="tx">' + esc(c.message || '') + '</div>' +
-      '<div class="foot"><span class="tm">' + esc(fmtClock(c.time)) + '</span>' +
-      (mine ? '<button class="kill" type="button" data-kill="' + esc(c.id) + '">sil</button>' : '') +
-      '</div></div></div>';
-  });
-  list.innerHTML = html;
-
-  list.querySelectorAll('.kill').forEach(function (btn) {
-    btn.addEventListener('click', function () { removeComment(btn.getAttribute('data-kill')); });
-  });
-
-  scrollChat(!!forceScroll);
-}
-
-function setNote(msg, bad) {
-  const note = document.getElementById('msgNote');
-  if (!note) return;
-  note.textContent = msg;
-  note.className = 'note' + (bad ? ' bad' : '');
-}
-
-async function removeComment(id) {
-  if (!db || !id) return;
-  if (!confirm('Bu mesaj silinsin mi?')) return;
-  try {
-    await db.collection('kapisma_comments').doc(id).delete();
-  } catch (err) {
-    setNote('Silinemedi: ' + err.message, true);
-  }
-}
-
-async function postComment() {
-  const btn = document.getElementById('msgSend');
-  const text = document.getElementById('msgText');
-  if (!btn || !text) return;
-  if (!db) { setNote('Bağlantı yok, mesaj gönderilemiyor', true); return; }
-  if (cleanName(viewerName).length < MIN_NAME) { openGate(''); return; }
-
-  const message = text.value.trim().slice(0, MAX_MESSAGE);
-  if (!message) { text.focus(); return; }
-
+  const btn = document.getElementById('sendBtn');
   btn.disabled = true;
-  try {
-    await db.collection('kapisma_comments').add({
-      name: viewerName,
-      uid: viewerId,
-      message: message,
-      time: new Date().toISOString()
-    });
-    text.value = '';
-    autoGrow(text);
-    updateCounter();
-    setNote('');
-    scrollChat(true);
-  } catch (err) {
-    setNote('Gönderilemedi: ' + err.message, true);
+  try{
+    if(editTarget){
+      const c = latestComments.find(x => x.id === editTarget.id);
+      if(!c || c.uid !== MY_UID){
+        UI.toast('Sadece kendi mesajını düzenleyebilirsin', true);
+      }else{
+        const upd = { message: message, edited: true, editedAt: new Date().toISOString() };
+        const oldImageId = c.imageId || '';
+
+        if(editTarget.newImage){
+          const ref = await db.collection('kapisma_images').add({
+            data: editTarget.newImage, uid: MY_UID, time: new Date().toISOString()
+          });
+          upd.imageId = ref.id;
+          imgCache.set(ref.id, editTarget.newImage);
+        }else if(editTarget.removeImage){
+          upd.imageId = firebase.firestore.FieldValue.delete();
+        }
+
+        await db.collection('kapisma_comments').doc(editTarget.id).update(upd);
+
+        /* Eski görsel dokümanı artık kimseye bağlı değil — temizle */
+        if(oldImageId && (editTarget.newImage || editTarget.removeImage)){
+          imgCache.delete(oldImageId);
+          try{ await db.collection('kapisma_images').doc(oldImageId).delete(); }catch(e){}
+        }
+        UI.toast(editTarget.newImage ? 'Fotoğraf değiştirildi'
+               : (editTarget.removeImage ? 'Fotoğraf kaldırıldı' : 'Mesaj güncellendi'));
+      }
+    }else{
+      let imageId = '';
+      if(pendingImage){
+        const ref = await db.collection('kapisma_images').add({
+          data: pendingImage, uid: MY_UID, time: new Date().toISOString()
+        });
+        imageId = ref.id;
+        imgCache.set(imageId, pendingImage);
+      }
+      const doc = {
+        name: getUserName(),
+        uid: MY_UID,
+        message: message,
+        time: new Date().toISOString(),
+        edited: false
+      };
+      if(imageId) doc.imageId = imageId;
+      if(replyTarget){
+        doc.replyTo = {
+          id: replyTarget.id,
+          name: replyTarget.name,
+          message: String(replyTarget.message || '').slice(0, 120)
+        };
+      }
+      await db.collection('kapisma_comments').add(doc);
+    }
+    input.value = '';
+    cancelCompose();
+  }catch(err){
+    UI.toast('Gönderilemedi: ' + err.message, true);
   }
   btn.disabled = false;
-  text.focus();
 }
 
-function updateTalkTab() {
-  const tab = document.querySelector('.tab[data-tab="talk"]');
-  if (!tab) return;
-  const count = tab.querySelector('.count');
-  if (count) count.textContent = latestComments.length;
-  else if (latestComments.length) {
-    const span = document.createElement('span');
-    span.className = 'count';
-    span.textContent = latestComments.length;
-    tab.appendChild(span);
-  }
-  const ping = tab.querySelector('.ping');
-  if (unread && activeTab !== 'talk' && !ping) {
-    const dot = document.createElement('span');
-    dot.className = 'ping';
-    tab.appendChild(dot);
-  } else if ((!unread || activeTab === 'talk') && ping) {
-    ping.remove();
-  }
+/* ============ HESAPLAMALAR ============ */
+function computeH2H(matches){
+  let wins1 = 0, wins2 = 0, draws = 0;
+  (matches || []).forEach(m => {
+    if(m.w1 > m.w2) wins1++; else if(m.w2 > m.w1) wins2++; else draws++;
+  });
+  return {wins1, wins2, draws, total:(matches || []).length};
+}
+function computeSeasons(matches){
+  const map = {};
+  (matches || []).forEach(m => {
+    const s = m.season || 'Belirtilmemiş';
+    if(!map[s]) map[s] = {season:s, matches:0, wins1:0, wins2:0, draws:0};
+    map[s].matches++;
+    if(m.w1 > m.w2) map[s].wins1++;
+    else if(m.w2 > m.w1) map[s].wins2++;
+    else map[s].draws++;
+  });
+  return Object.values(map);
+}
+function computeStatLeaders(stats){
+  return (stats || []).map(s => {
+    const v1 = parseFloat(s.v1) || 0, v2 = parseFloat(s.v2) || 0;
+    return Object.assign({}, s, {v1, v2, leader: v1 > v2 ? 1 : (v2 > v1 ? 2 : 0)});
+  });
 }
 
-/* ---------- başlangıç ---------- */
-
-viewerId = store.get('kt_id') || '';
-viewerName = cleanName(store.get('kt_name'));
-if (viewerName.length < MIN_NAME) {
-  viewerName = '';
-  openGate('');
-} else {
-  if (!viewerId) { viewerId = newId(); store.set('kt_id', viewerId); }
-  renderWho();
+/* Bir maç kümesindeki istatistikleri birleştirir.
+   Yüzdelik istatistikler toplanmaz, ortalaması alınır. */
+function aggregateStats(matches){
+  const map = new Map();
+  (matches || []).forEach(m => {
+    (m.statsSnapshot || []).forEach(s => {
+      const key = String(s.label || '').trim();
+      if(!key) return;
+      const cur = map.get(key) || {label:key, v1:0, v2:0, n:0};
+      cur.v1 += parseFloat(s.v1) || 0;
+      cur.v2 += parseFloat(s.v2) || 0;
+      cur.n++;
+      map.set(key, cur);
+    });
+  });
+  const round = x => Math.round(x * 10) / 10;
+  return Array.from(map.values()).map(s => {
+    const avg = /%|yüzde|isabet/i.test(s.label) && s.n > 0;
+    const v1 = round(avg ? s.v1 / s.n : s.v1);
+    const v2 = round(avg ? s.v2 / s.n : s.v2);
+    return {label:s.label, v1, v2, avg, leader: v1 > v2 ? 1 : (v2 > v1 ? 2 : 0)};
+  });
+}
+function statEmoji(label){
+  const l = String(label || '').toLowerCase();
+  if(l.includes('gol')) return '⚽';
+  if(l.includes('asist')) return '👟';
+  if(l.includes('sarı')) return '🟨';
+  if(l.includes('kırmızı')) return '🟥';
+  if(l.includes('maç')) return '📅';
+  if(l.includes('hız')) return '⚡';
+  if(l.includes('pas')) return '🎯';
+  if(l.includes('şut')) return '🥅';
+  return '📊';
 }
 
-try {
-  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    configOk = true;
-  }
-} catch (e) { configOk = false; }
+/* ============ ANA RENDER ============ */
+function render(data){
+  latestData = data;
+  const content = document.getElementById('content');
+  const headerSeason = document.getElementById('headerSeason');
 
-if (configOk) {
-  document.getElementById('subLine').textContent = 'canlı tablo';
+  if(!data || !Array.isArray(data.stats) || data.stats.length === 0){
+    content.innerHTML = '<div class="card empty-state">Henüz veri yok.<br>Admin panelinden veri girip <b>Kaydet</b>\'e bas.</div>';
+    headerSeason.textContent = 'Veri bekleniyor';
+    return;
+  }
+
+  const p1 = data.player1 || {name:'Oyuncu 1', team:''};
+  const p2 = data.player2 || {name:'Oyuncu 2', team:''};
+  const n1 = esc(p1.name || 'Oyuncu 1'), n2 = esc(p2.name || 'Oyuncu 2');
+  /* Maçlar artık kendi koleksiyonundan gelir; eski gömülü dizi yedek olarak durur */
+  const allMatches = latestMatches.length ? latestMatches : (data.matches || []);
+  const seasonRows = computeSeasons(allMatches);
+
+  /* Sezon filtresi — geçerli değilse tüm zamanlara düş */
+  const seasonNames = seasonRows.map(s => s.season);
+  if(activeSeason !== 'all' && !seasonNames.includes(activeSeason)) activeSeason = 'all';
+  const matches = activeSeason === 'all'
+    ? allMatches
+    : allMatches.filter(m => (m.season || 'Belirtilmemiş') === activeSeason);
+
+  const h2h = computeH2H(matches);
+  const leaders = computeStatLeaders(data.stats);
+  const seasonLabel = activeSeason === 'all' ? 'Tüm Zamanlar' : activeSeason;
+
+  let seasonFilter = '';
+  if(seasonNames.length){
+    seasonFilter = '<div class="season-filter"><span class="sf-label">Sezon</span>' +
+      '<div class="sf-chip ' + (activeSeason === 'all' ? 'active' : '') + '" data-season="all">Tüm Zamanlar</div>' +
+      seasonNames.map(n =>
+        '<div class="sf-chip ' + (activeSeason === n ? 'active' : '') + '" data-season="' + esc(n) + '">' + esc(n) + '</div>'
+      ).join('') +
+      '</div>';
+  }
+
+  headerSeason.textContent = data.season ? 'Sezon: ' + data.season : 'Sezon belirtilmemiş';
+
+  let pillsHtml = '<div class="pill-tab ' + (activeTab === 'sezon' ? 'active' : '') + '" data-tab="sezon">🏆 Özet</div>';
+  leaders.forEach((s, i) => {
+    pillsHtml += '<div class="pill-tab ' + (activeTab === 'stat' + i ? 'active' : '') + '" data-tab="stat' + i + '">' +
+      statEmoji(s.label) + ' ' + esc(s.label) + '</div>';
+  });
+
+  const playersRow =
+    '<div class="card"><div class="players-row">' +
+      '<div class="vcol">' + renderBadge(p1, 'p1') +
+        '<div style="min-width:0;"><div class="pname">' + n1 + '</div><div class="pteam">' + esc(p1.team || '') + '</div></div>' +
+      '</div>' +
+      '<div class="players-vs">VS</div>' +
+      '<div class="vcol right">' + renderBadge(p2, 'p2') +
+        '<div style="min-width:0;"><div class="pname">' + n2 + '</div><div class="pteam">' + esc(p2.team || '') + '</div></div>' +
+      '</div>' +
+    '</div></div>';
+
+  const h2hCard =
+    '<div class="card"><h3>Baş Başa (H2H) — ' + esc(seasonLabel) + '</h3>' +
+      '<div class="h2h-score">' +
+        '<div class="h2h-item"><div class="h2h-number">' + h2h.wins1 + '</div><div class="h2h-label">' + n1 + '</div></div>' +
+        '<div class="h2h-vs">-</div>' +
+        '<div class="h2h-item"><div class="h2h-number">' + h2h.wins2 + '</div><div class="h2h-label">' + n2 + '</div></div>' +
+      '</div>' +
+      '<div class="h2h-sub">' + h2h.total + ' kayıtlı maçtan hesaplandı (Berabere: ' + h2h.draws + ')</div>' +
+    '</div>';
+
+  let tabContent = '';
+  if(activeTab === 'sezon'){
+    const cards = leaders.map(s => {
+      const leaderName = s.leader === 1 ? n1 : (s.leader === 2 ? n2 : 'Berabere');
+      return '<div class="summary-card">' +
+        '<div class="icon">' + statEmoji(s.label) + '</div>' +
+        '<div class="body">' +
+          '<div class="label">' + esc(String(s.label).toUpperCase()) + '</div>' +
+          '<div class="value">Lider: <b>' + leaderName + '</b> (' + s.v1 + ' - ' + s.v2 + ')</div>' +
+        '</div></div>';
+    }).join('');
+
+    /* Seçili sezonun tüm maçlarından birleştirilmiş toplamlar */
+    const agg = aggregateStats(matches);
+    let aggBlock = '';
+    if(agg.length){
+      const aggCards = agg.map(s => {
+        const leaderName = s.leader === 1 ? n1 : (s.leader === 2 ? n2 : 'Berabere');
+        return '<div class="summary-card">' +
+          '<div class="icon">' + statEmoji(s.label) + '</div>' +
+          '<div class="body">' +
+            '<div class="label">' + esc(String(s.label).toUpperCase()) + (s.avg ? ' · ORTALAMA' : '') + '</div>' +
+            '<div class="value">Lider: <b>' + leaderName + '</b> (' + s.v1 + ' - ' + s.v2 + ')</div>' +
+          '</div></div>';
+      }).join('');
+      aggBlock = '<div class="card"><h3>📊 ' + esc(seasonLabel) + ' Toplamları</h3>' +
+        '<div class="agg-note">' + h2h.total + ' maçtan birleştirildi. Yüzdelik istatistiklerde ortalama alınır.</div>' +
+        aggCards + '</div>';
+    }
+
+    tabContent = '<div class="card"><h3>🏆 Güncel Maç Liderleri</h3>' + cards + '</div>' + aggBlock;
+  }else{
+    const idx = parseInt(activeTab.replace('stat', ''), 10);
+    const s = leaders[idx];
+    if(s){
+      const max = Math.max(s.v1, s.v2, 1);
+      tabContent =
+        '<div class="card"><h3>' + statEmoji(s.label) + ' ' + esc(s.label) + '</h3>' +
+          '<div class="stat-focus"><div class="stat-values">' +
+            '<div class="sv ' + (s.leader === 1 ? 'lead' : '') + '">' + s.v1 + '</div>' +
+            '<div class="stat-title">' + n1 + ' — ' + n2 + '</div>' +
+            '<div class="sv ' + (s.leader === 2 ? 'lead' : '') + '">' + s.v2 + '</div>' +
+          '</div>' +
+          '<div class="bar-track">' +
+            '<div class="bar-fill-l" style="width:' + ((s.v1 / max) * 50) + '%"></div>' +
+            '<div class="bar-fill-r" style="width:' + ((s.v2 / max) * 50) + '%"></div>' +
+          '</div></div>' +
+        '</div>';
+    }
+  }
+
+  let w1 = 0, w2 = 0;
+  leaders.forEach(s => { if(s.leader === 1) w1++; else if(s.leader === 2) w2++; });
+  const summaryText = w1 === w2
+    ? 'Bu maçta skor eşit: <b>' + n1 + ' ' + w1 + ' - ' + w2 + ' ' + n2 + '</b>'
+    : 'Bu maçta üstün olan: <b>' + (w1 > w2 ? n1 : n2) + '</b> — istatistik skoru <b>' + n1 + ' ' + w1 + ' - ' + w2 + ' ' + n2 + '</b>';
+
+  let seasonTable = '';
+  if(seasonRows.length){
+    const rows = seasonRows.map(s =>
+      '<tr class="' + (s.season === activeSeason || (activeSeason === 'all' && s.season === data.season) ? 'now' : '') + '">' +
+        '<td>' + esc(s.season) + '</td><td>' + s.matches + '</td>' +
+        '<td>' + s.wins1 + '</td><td>' + s.wins2 + '</td><td>' + s.draws + '</td>' +
+      '</tr>').join('');
+    seasonTable =
+      '<div class="card"><h3>📅 Sezon Karşılaştırması — Otomatik</h3>' +
+        '<table class="season-table"><thead><tr>' +
+          '<th>Sezon</th><th>Maç</th><th>' + n1 + '</th><th>' + n2 + '</th><th>Bera.</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table>' +
+      '</div>';
+  }
+
+  let videoHtml = '';
+  if(data.videos && (safeUrl(data.videos.link1) || safeUrl(data.videos.link2))){
+    const l1 = safeUrl(data.videos.link1), l2 = safeUrl(data.videos.link2);
+    videoHtml = '<div class="card"><h3>🎬 Videolar</h3><div class="video-links">';
+    if(l1) videoHtml += '<a href="' + l1 + '" target="_blank" rel="noopener noreferrer" class="video-btn p1">' + n1 + '</a>';
+    if(l2) videoHtml += '<a href="' + l2 + '" target="_blank" rel="noopener noreferrer" class="video-btn p2">' + n2 + '</a>';
+    videoHtml += '</div></div>';
+  }
+
+  content.innerHTML =
+    seasonFilter +
+    '<div class="pill-tabs">' + pillsHtml + '</div>' +
+    playersRow + h2hCard + tabContent +
+    '<div class="card"><div class="score-summary">' + summaryText + '</div></div>' +
+    seasonTable + videoHtml;
+}
+
+document.getElementById('content').addEventListener('click', e => {
+  const sf = e.target.closest('.sf-chip[data-season]');
+  if(sf){
+    activeSeason = sf.dataset.season;
+    render(latestData);
+    return;
+  }
+  const t = e.target.closest('.pill-tab[data-tab]');
+  if(!t) return;
+  activeTab = t.dataset.tab;
+  render(latestData);
+});
+
+/* ============ BAŞLAT ============ */
+if(configOk){
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
 
   db.collection('kapisma').doc('mac').onSnapshot(
-    function (snap) { latestData = snap.exists ? snap.data() : null; render(); },
-    function (err) { document.getElementById('content').innerHTML = '<div class="blank">Tablo yüklenemedi: ' + esc(err.message) + '</div>'; }
+    snap => { render(snap.exists ? snap.data() : null); },
+    err => {
+      document.getElementById('content').innerHTML =
+        '<div class="card empty-state">Bağlantı hatası: ' + esc(err.message) + '</div>';
+    }
   );
-  db.collection('kapisma_matches').orderBy('date', 'desc').limit(300).onSnapshot(
-    function (snap) {
-      latestMatches = snap.docs.map(function (d) { return d.data(); });
-      if (seasonFilter !== 'all' && seasonsOf(latestMatches).indexOf(seasonFilter) < 0) seasonFilter = 'all';
-      render();
-    },
-    function (err) { console.error('Maç geçmişi yüklenemedi:', err); }
-  );
-  db.collection('kapisma_comments').orderBy('time', 'asc').limitToLast(200).onSnapshot(
-    function (snap) {
-      const before = latestComments.length;
-      latestComments = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
-      const last = latestComments[latestComments.length - 1];
-      const fromOther = last && last.uid !== viewerId;
-      if (latestComments.length > before && fromOther && activeTab !== 'talk') unread = true;
-      if (activeTab === 'talk') seenCount = latestComments.length;
 
-      if (document.getElementById('msgList')) { renderComments(false); updateTalkTab(); }
-      else render();
+  db.collection('kapisma_matches').orderBy('date', 'asc').onSnapshot(
+    snap => {
+      latestMatches = snap.docs.map(d => Object.assign({id:d.id}, d.data()));
+      if(latestData) render(latestData);
     },
-    function (err) { console.error('Mesajlar yüklenemedi:', err); }
+    err => console.error('Maçlar yüklenemedi:', err.message)
   );
-} else {
-  document.getElementById('subLine').textContent = 'bağlantı yok';
-  document.getElementById('content').innerHTML = '<div class="blank">Firebase bağlantısı kurulamadı.<br>Sayfadaki <b>firebaseConfig</b> değerlerini kontrol et.</div>';
+
+  db.collection('kapisma_comments').orderBy('time', 'desc').limit(100).onSnapshot(
+    snap => {
+      latestComments = snap.docs.map(d => Object.assign({id:d.id}, d.data())).reverse();
+      renderMessages();
+      if(sheetOpen) markSeen(); else paintBadge();
+    },
+    err => {
+      document.getElementById('msgList').innerHTML =
+        '<div class="msg-empty">Mesajlar yüklenemedi: ' + esc(err.message) + '</div>';
+    }
+  );
+}else{
+  document.getElementById('content').innerHTML = '<div class="card empty-state">Firebase config bekleniyor</div>';
+}
+
+/* ============ PWA ============ */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js')
+      .catch(err => console.warn('Service worker kaydedilemedi:', err.message));
+  });
 }
 </script>
 </body>
